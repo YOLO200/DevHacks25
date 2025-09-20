@@ -1,0 +1,60 @@
+Project Brief: AI-Powered Medical Companion Platform
+
+1. Vision
+
+An AI-powered platform designed to support patients and their caregivers by improving communication, simplifying healthcare interactions, and ensuring seamless information sharing.
+
+2. Target Users
+	•	Patients: Individuals who need support in managing healthcare interactions, doctor visits, and daily medical records.
+	•	Caregivers: Family members, professional caregivers, or medical aides responsible for monitoring and supporting patients.
+
+3. Goals
+	•	Empower patients with easy-to-use tools for recording and managing health information.
+	•	Reduce caregiver burden by providing access to organized, reliable medical data.
+	•	Improve continuity of care by bridging the communication gap between patients, caregivers, and doctors.
+
+4. Core Features
+
+For Patients
+	•	Doctor Conversation Recording
+	•	Record conversations during appointments.
+	•	Upload existing audio files for processing and storage.
+	•	Caregiver Management
+	•	Add caregiver information (contact details, relationship, role).
+	•	Data Sharing
+	•	Share recordings and notes with caregivers via:
+	•	Secure in-platform access.
+	•	Email invitations/links.
+
+For Caregivers
+	•	Shared Dashboard
+	•	View recordings and notes shared by the patient.
+	•	Receive notifications of new uploads or updates.
+	•	Care Coordination
+	•	Track doctor visit history, shared tasks, and medical updates.
+	•	Access Controls
+	•	Ensure proper permissions (view-only vs. edit).
+
+5. Platform Flow (High-Level)
+	1.	Account Creation
+	•	Patients and caregivers create distinct account types.
+	•	Role-based dashboards are automatically configured.
+	2.	Recording & Upload (Patient)
+	•	Patient records or uploads a doctor conversation.
+	•	Platform processes and organizes the audio file.
+	3.	Caregiver Link
+	•	Patient adds caregiver to their account.
+	•	Shares selected recordings/notes.
+	4.	Caregiver Access
+	•	Caregiver logs in to view shared materials.
+	•	Caregiver can track patient’s healthcare journey.
+
+6. Differentiators
+	•	Focused on patient accessibility (simple UI, voice-driven inputs, large fonts).
+	•	Dual-user design (separate but connected experiences for patients and caregivers).
+	•	AI-assisted organization of conversations (summaries, key highlights, reminders).
+
+7. Next Steps
+	•	Flesh out caregiver-specific features (e.g., task reminders, medication tracking, appointment coordination).
+	•	Define technical requirements (AI transcription engine, security, compliance with HIPAA/GDPR).
+	•	Prototype the patient and caregiver dashboards.
