@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface Todo {
@@ -17,11 +17,7 @@ export default function TodoList({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
 
-  useEffect(() => {
-    fetchTodos()
-  }, [])
-
-  const fetchTodos = async () => {
+  const fetchTodos = useCallback(async () => {
     setLoading(true)
     try {
       const { data, error } = await supabase
@@ -37,7 +33,11 @@ export default function TodoList({ userId }: { userId: string }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase, userId])
+
+  useEffect(() => {
+    fetchTodos()
+  }, [fetchTodos])
 
   const addTodo = async (e: React.FormEvent) => {
     e.preventDefault()
