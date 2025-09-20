@@ -24,12 +24,8 @@ export default function VoiceRecorder({ userId }: VoiceRecorderProps) {
   const [recordingTime, setRecordingTime] = useState(0)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
-  const intervalRef = useRef<NodeJS.Timeout>()
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const supabase = createClient()
-
-  useEffect(() => {
-    fetchRecordings()
-  }, [fetchRecordings])
 
   useEffect(() => {
     if (isRecording) {
@@ -69,6 +65,10 @@ export default function VoiceRecorder({ userId }: VoiceRecorderProps) {
       }
     }
   }, [supabase, userId])
+
+  useEffect(() => {
+    fetchRecordings()
+  }, [fetchRecordings])
 
   const startRecording = async () => {
     try {

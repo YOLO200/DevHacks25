@@ -88,6 +88,12 @@ export default function ReportsPage() {
     }
   }, [supabase])
 
+  useEffect(() => {
+    fetchProfile()
+    fetchRecordings()
+    fetchReports()
+  }, [fetchProfile, fetchRecordings, fetchReports])
+
   const playRecording = async (filePath: string) => {
     try {
       const { data } = await supabase.storage
