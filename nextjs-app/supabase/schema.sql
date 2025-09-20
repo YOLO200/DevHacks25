@@ -182,4 +182,3 @@ CREATE TRIGGER update_medical_reports_updated_at
 CREATE INDEX idx_medical_reports_user_id ON medical_reports(user_id);
 CREATE INDEX idx_medical_reports_date ON medical_reports(date);
 CREATE INDEX idx_medical_reports_type ON medical_reports(type);
->>>>>>> Stashed changes
