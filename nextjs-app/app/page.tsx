@@ -121,7 +121,7 @@ export default function Home() {
                       : 'text-gray-600 hover:text-gray-800'
                   }`}
                 >
-                  👤 I'm a Patient
+                  👤 I&apos;m a Patient
                 </button>
                 <button
                   onClick={() => setUserType('caregiver')}
@@ -131,7 +131,7 @@ export default function Home() {
                       : 'text-gray-600 hover:text-gray-800'
                   }`}
                 >
-                  🤝 I'm a Caregiver
+                  🤝 I&apos;m a Caregiver
                 </button>
               </div>
             </div>
