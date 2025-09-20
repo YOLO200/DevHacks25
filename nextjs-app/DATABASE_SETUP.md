@@ -1,40 +1,47 @@
--- Create todos table
-CREATE TABLE IF NOT EXISTS todos (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  completed BOOLEAN DEFAULT FALSE,
+# Database Setup Guide
+
+## 🚨 **IMPORTANT: Run This First**
+
+The application is currently showing 404 errors because the database tables don't exist yet. Follow these steps to set up your database:
+
+## Step 1: Access Supabase Dashboard
+
+1. Go to [Supabase Dashboard](https://app.supabase.com/project/ojspmpczbuxlntxxcpde)
+2. Navigate to **SQL Editor** (in the left sidebar)
+3. Click **"New Query"**
+
+## Step 2: Create Tables
+
+Copy and paste the following SQL in the editor and click **"Run"**:
+
+```sql
+-- User Profiles Table
+CREATE TABLE user_profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  full_name TEXT NOT NULL,
+  user_type TEXT NOT NULL CHECK (user_type IN ('patient', 'caregiver')),
+  patient_phone_number TEXT,
+  caregiver_phone_number TEXT,
+  preferences JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Enable Row Level Security
-ALTER TABLE todos ENABLE ROW LEVEL SECURITY;
+-- Enable RLS
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
--- Create policy to allow users to see only their own todos
-CREATE POLICY "Users can view own todos" ON todos
-  FOR SELECT
-  USING (auth.uid() = user_id);
+-- RLS Policies
+CREATE POLICY "Users can view own profile" ON user_profiles
+  FOR SELECT USING (auth.uid() = id);
 
--- Create policy to allow users to insert their own todos
-CREATE POLICY "Users can insert own todos" ON todos
-  FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own profile" ON user_profiles
+  FOR UPDATE USING (auth.uid() = id);
 
--- Create policy to allow users to update their own todos
-CREATE POLICY "Users can update own todos" ON todos
-  FOR UPDATE
-  USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own profile" ON user_profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Create policy to allow users to delete their own todos
-CREATE POLICY "Users can delete own todos" ON todos
-  FOR DELETE
-  USING (auth.uid() = user_id);
-
--- Create an index for better query performance
-CREATE INDEX idx_todos_user_id ON todos(user_id);
-
--- Create updated_at trigger
+-- Updated at trigger
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -43,12 +50,8 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-<<<<<<< Updated upstream
-CREATE TRIGGER update_todos_updated_at BEFORE UPDATE
-  ON todos FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-=======
-CREATE TRIGGER update_user_profiles_updated_at 
-  BEFORE UPDATE ON user_profiles 
+CREATE TRIGGER update_user_profiles_updated_at
+  BEFORE UPDATE ON user_profiles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Index for performance
@@ -92,19 +95,6 @@ CREATE TRIGGER update_recordings_updated_at
 -- Index for performance
 CREATE INDEX idx_recordings_user_id ON recordings(user_id);
 CREATE INDEX idx_recordings_created_at ON recordings(created_at);
-
--- Storage bucket for recordings (run this in Supabase Dashboard → Storage)
--- INSERT INTO storage.buckets (id, name, public) VALUES ('recordings', 'recordings', false);
-
--- Storage policies (run this in Supabase Dashboard → Storage → recordings bucket → Policies)
--- CREATE POLICY "Users can upload own recordings" ON storage.objects
---   FOR INSERT WITH CHECK (bucket_id = 'recordings' AND auth.uid()::text = (storage.foldername(name))[1]);
-
--- CREATE POLICY "Users can view own recordings" ON storage.objects
---   FOR SELECT USING (bucket_id = 'recordings' AND auth.uid()::text = (storage.foldername(name))[1]);
-
--- CREATE POLICY "Users can delete own recordings" ON storage.objects
---   FOR DELETE USING (bucket_id = 'recordings' AND auth.uid()::text = (storage.foldername(name))[1]);
 
 -- Caregiver Relationships Table
 CREATE TABLE caregiver_relationships (
@@ -182,4 +172,83 @@ CREATE TRIGGER update_medical_reports_updated_at
 CREATE INDEX idx_medical_reports_user_id ON medical_reports(user_id);
 CREATE INDEX idx_medical_reports_date ON medical_reports(date);
 CREATE INDEX idx_medical_reports_type ON medical_reports(type);
->>>>>>> Stashed changes
+
+```
+
+## Step 3: Create Storage Bucket for Recordings
+
+1. Navigate to **Storage** in the Supabase dashboard
+2. Click **"New Bucket"**
+3. Name it `recordings`
+4. Set it to **Private** (not public)
+5. Click **"Create bucket"**
+
+## Step 4: Set Storage Policies
+
+Go to the `recordings` bucket → **Policies** and add these policies:
+
+```sql
+-- Policy 1: Users can upload own recordings
+CREATE POLICY "Users can upload own recordings" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'recordings' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- Policy 2: Users can view own recordings
+CREATE POLICY "Users can view own recordings" ON storage.objects
+  FOR SELECT USING (
+    bucket_id = 'recordings' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- Policy 3: Users can delete own recordings
+CREATE POLICY "Users can delete own recordings" ON storage.objects
+  FOR DELETE USING (
+    bucket_id = 'recordings' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+```
+
+## Step 5: Verify Setup
+
+After running the SQL:
+
+1. Check **Database** → **Tables** - you should see:
+   - `user_profiles`
+   - `recordings`
+   - `caregiver_relationships`
+   - `medical_reports`
+
+2. Check **Storage** → you should see:
+   - `recordings` bucket
+
+## Step 6: Test the Application
+
+1. Refresh your application at http://localhost:3000
+2. The 404 errors should be gone
+3. Try creating a new account and using the features
+
+## ✅ **Expected Results After Setup:**
+
+- ✅ No more 404 errors in console
+- ✅ User registration creates profile automatically
+- ✅ Dashboard loads without errors
+- ✅ Voice recording works (after microphone permission)
+- ✅ Caregivers page loads
+- ✅ Reports page loads
+
+## 🚨 **If You Still Get Errors:**
+
+1. **Check RLS is enabled** on all tables
+2. **Verify policies exist** for each table
+3. **Make sure storage bucket exists** and is named `recordings`
+4. **Check your environment variables** are correct
+5. **Try logging out and back in** to refresh auth state
+
+## 📞 **Need Help?**
+
+If you encounter issues:
+1. Check the Supabase dashboard logs
+2. Verify your project URL and API keys
+3. Make sure you're on the correct Supabase project
