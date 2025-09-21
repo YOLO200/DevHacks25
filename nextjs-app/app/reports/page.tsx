@@ -28,7 +28,7 @@ export default function ReportsPage() {
   const [recordings, setRecordings] = useState<Recording[]>([])
   const [reports, setReports] = useState<MedicalReport[]>([])
   const [profile, setProfile] = useState<{full_name: string, user_type: 'patient' | 'caregiver'} | null>(null)
-  const [activeTab, setActiveTab] = useState<'recordings' | 'reports' | 'timeline'>('recordings')
+  const [activeTab, setActiveTab] = useState<'recordings' | 'reports' | 'timeline'>('reports')
   const [selectedRecording, setSelectedRecording] = useState<Recording | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -172,8 +172,8 @@ export default function ReportsPage() {
           <div className="mb-8">
             <nav className="flex space-x-8">
               {[
-                { id: 'recordings', label: 'Recordings', icon: '🎙️' },
                 { id: 'reports', label: 'Medical Reports', icon: '📋' },
+                { id: 'recordings', label: 'Recordings', icon: '🎙️' },
                 { id: 'timeline', label: 'Timeline', icon: '📅' }
               ].map((tab) => (
                 <button
@@ -191,6 +191,50 @@ export default function ReportsPage() {
               ))}
             </nav>
           </div>
+
+          {/* Medical Reports Tab */}
+          {activeTab === 'reports' && (
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-xl font-bold text-gray-900">Medical Reports</h3>
+                <p className="text-gray-600 mt-1">Lab results, prescriptions, and medical documents</p>
+              </div>
+
+              {reports.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">📋</span>
+                  </div>
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">No reports available</h4>
+                  <p className="text-gray-600">Medical reports and documents will appear here</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {reports.map((report) => (
+                    <div key={report.id} className="p-6">
+                      <div className="flex items-start">
+                        <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mr-4">
+                          <span className="text-xl">{getReportTypeIcon(report.type)}</span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-lg font-medium text-gray-900">{report.title}</h4>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getReportTypeColor(report.type)}`}>
+                              {report.type.replace('_', ' ').toUpperCase()}
+                            </span>
+                          </div>
+                          <p className="text-gray-600 mb-2">
+                            {formatDate(report.date)} {report.doctor_name && `• Dr. ${report.doctor_name}`}
+                          </p>
+                          <p className="text-gray-700">{report.content}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Recordings Tab */}
           {activeTab === 'recordings' && (
@@ -254,50 +298,6 @@ export default function ReportsPage() {
                               <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
                             </svg>
                           </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Medical Reports Tab */}
-          {activeTab === 'reports' && (
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-xl font-bold text-gray-900">Medical Reports</h3>
-                <p className="text-gray-600 mt-1">Lab results, prescriptions, and medical documents</p>
-              </div>
-
-              {reports.length === 0 ? (
-                <div className="p-12 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-2xl">📋</span>
-                  </div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-2">No reports available</h4>
-                  <p className="text-gray-600">Medical reports and documents will appear here</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-200">
-                  {reports.map((report) => (
-                    <div key={report.id} className="p-6">
-                      <div className="flex items-start">
-                        <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mr-4">
-                          <span className="text-xl">{getReportTypeIcon(report.type)}</span>
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-lg font-medium text-gray-900">{report.title}</h4>
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getReportTypeColor(report.type)}`}>
-                              {report.type.replace('_', ' ').toUpperCase()}
-                            </span>
-                          </div>
-                          <p className="text-gray-600 mb-2">
-                            {formatDate(report.date)} {report.doctor_name && `• Dr. ${report.doctor_name}`}
-                          </p>
-                          <p className="text-gray-700">{report.content}</p>
                         </div>
                       </div>
                     </div>

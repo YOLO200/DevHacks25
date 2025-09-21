@@ -49,13 +49,13 @@ export default function Sidebar({ userType, userName }: SidebarProps) {
       href: '/patients',
     },
     {
-      icon: '📋',
-      label: 'Care Plans',
-      href: '/care-plans',
+      icon: '📞',
+      label: 'Care Reminders',
+      href: '/care-reminders',
     },
     {
       icon: '📊',
-      label: 'Reports',
+      label: 'Reports & Recordings',
       href: '/reports',
     },
   ]

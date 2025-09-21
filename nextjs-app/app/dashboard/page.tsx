@@ -21,6 +21,50 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single()
 
+  // Fetch statistics for caregivers
+  let stats = {
+    recordings: 0,
+    reports: 0,
+    patients: 0
+  }
+
+  if (profile?.user_type === 'caregiver') {
+    // Get patients count for this caregiver
+    const { count: patientsCount } = await supabase
+      .from('caregiver_relationships')
+      .select('*', { count: 'exact', head: true })
+      .eq('caregiver_email', user.email)
+      .eq('status', 'accepted')
+
+    // Get recordings count from patients
+    const { count: recordingsCount } = await supabase
+      .from('voice_recordings')
+      .select('*', { count: 'exact', head: true })
+      .in('user_id', (await supabase
+        .from('caregiver_relationships')
+        .select('patient_id')
+        .eq('caregiver_email', user.email)
+        .eq('status', 'accepted')
+      ).data?.map(rel => rel.patient_id) || [])
+
+    // Get reports count from patients
+    const { count: reportsCount } = await supabase
+      .from('medical_reports')
+      .select('*', { count: 'exact', head: true })
+      .in('user_id', (await supabase
+        .from('caregiver_relationships')
+        .select('patient_id')
+        .eq('caregiver_email', user.email)
+        .eq('status', 'accepted')
+      ).data?.map(rel => rel.patient_id) || [])
+
+    stats = {
+      recordings: recordingsCount || 0,
+      reports: reportsCount || 0,
+      patients: patientsCount || 0
+    }
+  }
+
   return (
     <div className="flex">
       <Sidebar userType={profile?.user_type || 'patient'} userName={profile?.full_name || user.email} />
@@ -46,7 +90,9 @@ export default async function DashboardPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Recordings</h3>
-                  <p className="text-gray-600">View & manage</p>
+                  <p className="text-gray-600">
+                    {profile?.user_type === 'caregiver' ? `${stats.recordings} total` : 'View & manage'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -58,7 +104,9 @@ export default async function DashboardPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Reports</h3>
-                  <p className="text-gray-600">Medical history</p>
+                  <p className="text-gray-600">
+                    {profile?.user_type === 'caregiver' ? `${stats.reports} total` : 'Medical history'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -72,7 +120,9 @@ export default async function DashboardPage() {
                   <h3 className="text-lg font-semibold text-gray-900">
                     {profile?.user_type === 'patient' ? 'Caregivers' : 'Patients'}
                   </h3>
-                  <p className="text-gray-600">Manage access</p>
+                  <p className="text-gray-600">
+                    {profile?.user_type === 'caregiver' ? `${stats.patients} total` : 'Manage access'}
+                  </p>
                 </div>
               </div>
             </div>
