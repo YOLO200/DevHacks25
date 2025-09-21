@@ -138,17 +138,51 @@ function Sidebar({ userType, userName, activeView, onViewChange }: SidebarProps)
       {/* User Info */}
       {!isCollapsed && (
         <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center">
+          <button
+            onClick={() => onViewChange('profile')}
+            className={`w-full flex items-center p-2 rounded-lg transition-colors duration-200 hover:bg-gray-50 ${
+              activeView === 'profile' 
+                ? (isPatient 
+                    ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500' 
+                    : 'bg-emerald-50 text-emerald-700 border-l-4 border-emerald-500')
+                : 'text-gray-700 hover:text-gray-900'
+            }`}
+            title="Edit Profile"
+          >
             <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-lg bg-gradient-to-br ${
               isPatient ? 'from-blue-500 to-purple-600' : 'from-emerald-500 to-teal-600'
             }`}>
               {isPatient ? '👤' : '🤝'}
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-900">{userName}</p>
-              <p className="text-xs text-gray-500 capitalize">{userType}</p>
+            <div className="ml-3 text-left">
+              <p className="text-sm font-medium">{userName}</p>
+              <p className="text-xs opacity-75 capitalize">{userType}</p>
             </div>
-          </div>
+            <div className="ml-auto">
+              <svg className="w-4 h-4 opacity-50" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+              </svg>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* Collapsed User Avatar */}
+      {isCollapsed && (
+        <div className="p-4 border-b border-gray-200">
+          <button
+            onClick={() => onViewChange('profile')}
+            className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm bg-gradient-to-br transition-all duration-200 ${
+              isPatient ? 'from-blue-500 to-purple-600' : 'from-emerald-500 to-teal-600'
+            } ${
+              activeView === 'profile' 
+                ? 'ring-2 ring-offset-2 ' + (isPatient ? 'ring-blue-500' : 'ring-emerald-500')
+                : 'hover:scale-105'
+            }`}
+            title="Edit Profile"
+          >
+            {isPatient ? '👤' : '🤝'}
+          </button>
         </div>
       )}
 

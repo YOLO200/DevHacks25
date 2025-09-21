@@ -507,7 +507,7 @@ export default function PatientsView() {
               </h4>
               <p className="text-gray-600 mb-6">
                 Patients will need to invite you to become their caregiver.
-                Once invited, you'll see their invitations here.
+                Once invited, you&apos;ll see their invitations here.
               </p>
             </div>
           ) : existingPatients.length === 0 ? (
