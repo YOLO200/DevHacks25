@@ -65,11 +65,34 @@ function LoginForm() {
         setMessage('Account created successfully! Please check your email for verification.')
       } else {
         // Sign in existing user
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: authData, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
         if (error) throw error
+
+        // Validate user type matches the portal they're trying to access
+        if (authData.user) {
+          const { data: profile, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('user_type')
+            .eq('id', authData.user.id)
+            .single()
+
+          if (profileError) {
+            await supabase.auth.signOut()
+            throw new Error('Unable to verify account type. Please try again.')
+          }
+
+          // Check if user type matches the selected portal
+          if (profile.user_type !== userType) {
+            await supabase.auth.signOut()
+            const currentPortal = userType === 'patient' ? 'Patient' : 'Caregiver'
+            const accountPortal = profile.user_type === 'patient' ? 'Patient' : 'Caregiver'
+            const correctUrl = profile.user_type === 'patient' ? '/login?type=patient' : '/login?type=caregiver'
+            throw new Error(`Access Denied: This account is registered as a ${accountPortal}. You're trying to access the ${currentPortal} portal. Please go to the ${accountPortal} portal at ${window.location.origin}${correctUrl} or create a new ${currentPortal} account.`)
+          }
+        }
         
         router.push('/dashboard')
         router.refresh()

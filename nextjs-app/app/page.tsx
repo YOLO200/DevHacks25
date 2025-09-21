@@ -110,7 +110,7 @@ export default function Home() {
 
         {/* User Type Selection */}
         <section className="container mx-auto px-6 pt-12">
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center">
             <div className="bg-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg border border-gray-200">
               <div className="flex">
                 <button
@@ -135,6 +135,9 @@ export default function Home() {
                 </button>
               </div>
             </div>
+            <p className="text-sm text-gray-500 mt-3 text-center max-w-md">
+              ⚠️ Important: Each portal is separate. If you have an account as a {userType === 'patient' ? 'Patient' : 'Caregiver'}, please use that portal to log in.
+            </p>
           </div>
         </section>
 

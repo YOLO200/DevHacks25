@@ -96,7 +96,7 @@ function Sidebar({ userType, userName, activeView, onViewChange }: SidebarProps)
   const caregiverMenuItems = [
     { viewKey: 'dashboard', icon: '🏠', label: 'Dashboard' },
     { viewKey: 'patients', icon: '👤', label: 'Patients' },
-    { viewKey: 'care-plans', icon: '📋', label: 'Care Plans' },
+    { viewKey: 'care-reminders', icon: '⏰', label: 'Care Reminders' },
     { viewKey: 'reports', icon: '📊', label: 'Reports' },
   ]
 

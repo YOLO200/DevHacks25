@@ -1,0 +1,313 @@
+  const renderContent = () => {
+    return (
+      <div className="p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+            <p className="text-gray-600">Welcome to your Medical Companion dashboard</p>
+          </div>
+          
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <button
+                  onClick={() => setActiveView('recordings')}
+                  className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow text-left"
+                >
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
+                      <span className="text-xl">🎙️</span>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Recordings</h3>
+                      <p className="text-gray-600">View & manage</p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setActiveView('reports')}
+                  className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow text-left"
+                >
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
+                      <span className="text-xl">📊</span>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Reports</h3>
+                      <p className="text-gray-600">Medical history</p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setActiveView(profile?.user_type === 'patient' ? 'caregivers' : 'patients')}
+                  className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow text-left"
+                >
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
+                      <span className="text-xl">👥</span>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {profile?.user_type === 'patient' ? 'Caregivers' : 'Patients'}
+                      </h3>
+                      <p className="text-gray-600">Manage access</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Voice Recorder - Can be shown for all users for now */}
+              <div className="mb-8">
+                <VoiceRecorder userId={userId} />
+              </div>
+
+              {/* Recent Activity */}
+              <div className="bg-white shadow-sm rounded-xl p-6 border border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                  Recent Medical Activity
+                </h2>
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">📋</span>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Your Medical Dashboard
+                  </h3>
+                  <p className="text-gray-600 max-w-md mx-auto">
+                    Record your doctor visits, manage caregivers, and track your medical history using the sidebar navigation.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!profile) {
+    return null
+  }
+
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Sidebar - Fixed and persistent */}
+      <Sidebar 
+        userType={profile.user_type} 
+        userName={profile.full_name}
+        activeView={activeView}
+        onViewChange={handleViewChange}
+      />
+
+      {/* Main Content Area - Only this changes */}
+      <main className="flex-1 ml-64 min-h-screen">
+        {renderContent()}
+      </main>
+
+      {/* Apple Error Notification */}
+      {notification && (
+        <AppleErrorNotification 
+          message={notification.message}
+          type={notification.type}
+          isVisible={notification.isVisible}
+          onClose={() => setNotification(null)}
+          duration={5000}
+        />
+      )}
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Share Medical Report</h3>
+                <button
+                  onClick={() => setShowShareModal(null)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Caregiver Selection */}
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-3">
+                    Select Caregivers ({selectedCaregivers.length} selected)
+                  </h4>
+                  {caregivers.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="text-4xl mb-2">👥</div>
+                      <p>Loading caregivers...</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {caregivers.map((caregiver) => (
+                        <div 
+                          key={caregiver.id}
+                          className={`flex items-start p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                            selectedCaregivers.includes(caregiver.id)
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                          }`}
+                          onClick={() => toggleCaregiverSelection(caregiver.id)}
+                        >
+                          <input
+                            type="checkbox"
+                            id={`caregiver-${caregiver.id}`}
+                            checked={selectedCaregivers.includes(caregiver.id)}
+                            onChange={() => toggleCaregiverSelection(caregiver.id)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-1 flex-shrink-0"
+                          />
+                          <label htmlFor={`caregiver-${caregiver.id}`} className="ml-3 flex-1 cursor-pointer">
+                            <div className="flex items-center justify-between">
+                              <div className="font-medium text-gray-900 text-sm leading-tight">
+                                {caregiver.full_name}
+                              </div>
+                              {caregiver.status && (
+                                <span className={`px-2 py-1 text-xs rounded-full ${
+                                  caregiver.status === 'accepted' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : caregiver.status === 'pending'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {caregiver.status === 'accepted' && '✅'}
+                                  {caregiver.status === 'pending' && '⏳'}
+                                  {caregiver.status === 'declined' && '❌'}
+                                  {caregiver.status}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-600 mt-1">
+                              {caregiver.specialty || caregiver.user_type}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {caregiver.email}
+                            </div>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Attach Transcript Option */}
+                <div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="includeTranscript"
+                      checked={includeTranscript}
+                      onChange={(e) => setIncludeTranscript(e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="includeTranscript" className="ml-3 text-gray-900">
+                      Include transcript with medical report
+                    </label>
+                  </div>
+                </div>
+
+                {/* Email Sharing Section */}
+                <div>
+                  <button
+                    onClick={() => setShareEmailExpanded(!shareEmailExpanded)}
+                    className="flex items-center justify-between w-full p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    <span className="font-medium text-blue-900">Share via Email</span>
+                    <svg 
+                      className={`w-5 h-5 text-blue-700 transition-transform ${shareEmailExpanded ? 'rotate-180' : ''}`}
+                      fill="currentColor" 
+                      viewBox="0 0 20 20"
+                    >
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+
+                  {shareEmailExpanded && (
+                    <div className="mt-3 p-4 bg-gray-50 rounded-lg space-y-3">
+                      <div>
+                        <label htmlFor="emailAddress" className="block text-sm font-medium text-gray-700 mb-1">
+                          Email Address
+                        </label>
+                        <input
+                          type="email"
+                          id="emailAddress"
+                          placeholder="Enter caregiver's email"
+                          value={emailAddress}
+                          onChange={(e) => setEmailAddress(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="customMessage" className="block text-sm font-medium text-gray-700 mb-1">
+                          Custom Message (Optional)
+                        </label>
+                        <textarea
+                          id="customMessage"
+                          placeholder="Add a personal message..."
+                          value={customMessage}
+                          onChange={(e) => setCustomMessage(e.target.value)}
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <button 
+                        onClick={sendEmailReport}
+                        disabled={sendingEmail}
+                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        {sendingEmail ? 'Sending...' : 'Send Email'}
+                      </button>
+                      <p className="text-xs text-gray-500">
+                        📧 Professional medical report will be sent via email
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={resetShareModal}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (selectedCaregivers.length === 0) {
+                      showNotification('Please select at least one caregiver', 'error')
+                      return
+                    }
+                    showNotification(`Report will be shared with ${selectedCaregivers.length} caregiver(s)${includeTranscript ? ' (including transcript)' : ''}`, 'success')
+                    resetShareModal()
+                  }}
+                  disabled={selectedCaregivers.length === 0}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  Share with {selectedCaregivers.length} Caregiver{selectedCaregivers.length !== 1 ? 's' : ''}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
