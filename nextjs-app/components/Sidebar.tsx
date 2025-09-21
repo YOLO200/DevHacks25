@@ -1,78 +1,112 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import SignOutButton from './SignOutButton'
+import { useState, memo } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 interface SidebarProps {
   userType: 'patient' | 'caregiver'
   userName: string
+  activeView: string
+  onViewChange: (view: string) => void
 }
 
-export default function Sidebar({ userType, userName }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false)
-  const pathname = usePathname()
+// Memoized navigation item component
+const NavItem = memo(({ viewKey, icon, label, isActive, isCollapsed, userType, onClick }: {
+  viewKey: string
+  icon: string
+  label: string
+  isActive: boolean
+  isCollapsed: boolean
+  userType: 'patient' | 'caregiver'
+  onClick: (view: string) => void
+}) => (
+  <li>
+    <button
+      onClick={() => onClick(viewKey)}
+      className={`w-full flex items-center p-3 rounded-lg transition-colors duration-200 ${
+        isActive
+          ? userType === 'patient'
+            ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500'
+            : 'bg-emerald-50 text-emerald-700 border-l-4 border-emerald-500'
+          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+      }`}
+    >
+      <span className="text-xl">{icon}</span>
+      {!isCollapsed && <span className="ml-3 font-medium text-left">{label}</span>}
+    </button>
+  </li>
+))
 
+NavItem.displayName = 'NavItem'
+
+// Memoized sign out button
+const SignOutButton = memo(({ isCollapsed }: { isCollapsed: boolean }) => {
+  const router = useRouter()
+  const supabase = createClient()
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut()
+      router.push('/login')
+      router.refresh()
+    } catch (error) {
+      console.error('Sign out error:', error)
+      // Fallback to direct navigation if router fails
+      window.location.href = '/login'
+    }
+  }
+
+  if (isCollapsed) {
+    return (
+      <button
+        onClick={handleSignOut}
+        className="p-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-colors w-full"
+        title="Sign Out"
+      >
+        <span className="text-lg">🚪</span>
+      </button>
+    )
+  }
+
+  return (
+    <button
+      onClick={handleSignOut}
+      className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+    >
+      Sign Out
+    </button>
+  )
+})
+
+SignOutButton.displayName = 'SignOutButton'
+
+function Sidebar({ userType, userName, activeView, onViewChange }: SidebarProps) {
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const isPatient = userType === 'patient'
+
+  // Menu items for different user types
   const patientMenuItems = [
-    {
-      icon: '🏠',
-      label: 'Dashboard',
-      href: '/dashboard',
-    },
-    {
-      icon: '👥',
-      label: 'Add Caregivers',
-      href: '/caregivers',
-    },
-    {
-      icon: '📊',
-      label: 'Reports & History',
-      href: '/reports',
-    },
-    {
-      icon: '🎙️',
-      label: 'Recordings',
-      href: '/recordings',
-    },
+    { viewKey: 'dashboard', icon: '🏠', label: 'Dashboard' },
+    { viewKey: 'caregivers', icon: '👥', label: 'Add Caregivers' },
+    { viewKey: 'reports', icon: '📊', label: 'Reports & History' },
+    { viewKey: 'recordings', icon: '🎙️', label: 'Recordings' },
   ]
 
   const caregiverMenuItems = [
-    {
-      icon: '🏠',
-      label: 'Dashboard',
-      href: '/dashboard',
-    },
-    {
-      icon: '👤',
-      label: 'Patients',
-      href: '/patients',
-    },
-    {
-      icon: '📋',
-      label: 'Care Plans',
-      href: '/care-plans',
-    },
-    {
-      icon: '📊',
-      label: 'Reports',
-      href: '/reports',
-    },
+    { viewKey: 'dashboard', icon: '🏠', label: 'Dashboard' },
+    { viewKey: 'patients', icon: '👤', label: 'Patients' },
+    { viewKey: 'care-plans', icon: '📋', label: 'Care Plans' },
+    { viewKey: 'reports', icon: '📊', label: 'Reports' },
   ]
 
-  const menuItems = userType === 'patient' ? patientMenuItems : caregiverMenuItems
-
-  const isActive = (href: string) => {
-    if (href === '/dashboard') {
-      return pathname === '/dashboard' || pathname === '/'
-    }
-    return pathname.startsWith(href)
-  }
+  const menuItems = isPatient ? patientMenuItems : caregiverMenuItems
 
   return (
     <div className={`bg-white shadow-lg transition-all duration-300 ${
       isCollapsed ? 'w-16' : 'w-64'
     } h-screen fixed left-0 top-0 z-50 flex flex-col`}>
+      
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
@@ -80,13 +114,14 @@ export default function Sidebar({ userType, userName }: SidebarProps) {
             <div>
               <h2 className="text-lg font-bold text-gray-900">Medical Companion</h2>
               <p className="text-sm text-gray-600">
-                {userType === 'patient' ? '👤 Patient Portal' : '🤝 Caregiver Dashboard'}
+                {isPatient ? '👤 Patient Portal' : '🤝 Caregiver Dashboard'}
               </p>
             </div>
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <svg
               className={`w-5 h-5 transform transition-transform ${isCollapsed ? 'rotate-180' : ''}`}
@@ -105,9 +140,9 @@ export default function Sidebar({ userType, userName }: SidebarProps) {
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-lg bg-gradient-to-br ${
-              userType === 'patient' ? 'from-blue-500 to-purple-600' : 'from-emerald-500 to-teal-600'
+              isPatient ? 'from-blue-500 to-purple-600' : 'from-emerald-500 to-teal-600'
             }`}>
-              {userType === 'patient' ? '👤' : '🤝'}
+              {isPatient ? '👤' : '🤝'}
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-900">{userName}</p>
@@ -121,32 +156,16 @@ export default function Sidebar({ userType, userName }: SidebarProps) {
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
           {menuItems.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className={`flex items-center p-3 rounded-lg transition-all duration-200 group ${
-                  isActive(item.href)
-                    ? userType === 'patient'
-                      ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500'
-                      : 'bg-emerald-50 text-emerald-700 border-l-4 border-emerald-500'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                <span className="text-xl">{item.icon}</span>
-                {!isCollapsed && (
-                  <>
-                    <span className="ml-3 font-medium">{item.label}</span>
-                    {isActive(item.href) && (
-                      <span className="ml-auto">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </span>
-                    )}
-                  </>
-                )}
-              </Link>
-            </li>
+            <NavItem
+              key={item.viewKey}
+              viewKey={item.viewKey}
+              icon={item.icon}
+              label={item.label}
+              isActive={activeView === item.viewKey}
+              isCollapsed={isCollapsed}
+              userType={userType}
+              onClick={onViewChange}
+            />
           ))}
         </ul>
       </nav>
@@ -155,40 +174,31 @@ export default function Sidebar({ userType, userName }: SidebarProps) {
       <div className="p-4 border-t border-gray-200">
         {!isCollapsed ? (
           <div className="space-y-2">
-            <Link
-              href="/settings"
-              className="flex items-center p-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-colors"
+            <button
+              onClick={() => onViewChange('settings')}
+              className="w-full flex items-center p-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-colors"
             >
               <span className="text-lg">⚙️</span>
               <span className="ml-3 text-sm font-medium">Settings</span>
-            </Link>
-            <div className="pt-2">
-              <SignOutButton />
-            </div>
+            </button>
+            <SignOutButton isCollapsed={false} />
           </div>
         ) : (
           <div className="space-y-2">
-            <Link
-              href="/settings"
+            <button
+              onClick={() => onViewChange('settings')}
               className="flex items-center justify-center p-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-colors"
               title="Settings"
             >
               <span className="text-lg">⚙️</span>
-            </Link>
-            <div className="flex justify-center">
-              <button
-                className="p-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-colors"
-                title="Sign Out"
-                onClick={() => {
-                  // This will need to be handled by the SignOutButton component
-                }}
-              >
-                <span className="text-lg">🚪</span>
-              </button>
-            </div>
+            </button>
+            <SignOutButton isCollapsed={true} />
           </div>
         )}
       </div>
     </div>
   )
 }
+
+// Only memoize the main component to prevent unnecessary re-renders when parent re-renders
+export default memo(Sidebar)

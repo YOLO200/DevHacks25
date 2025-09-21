@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Sidebar from '@/components/Sidebar'
 
@@ -19,12 +19,14 @@ export default function CaregiversPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
   const [profile, setProfile] = useState<{full_name: string, user_type: 'patient' | 'caregiver'} | null>(null)
+  const [showDropdown, setShowDropdown] = useState(false)
   const [formData, setFormData] = useState({
     caregiverEmail: '',
     caregiverName: '',
     relationship: '',
     permissions: [] as string[]
   })
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const supabase = createClient()
 
@@ -33,6 +35,16 @@ export default function CaregiversPage() {
     { id: 'view_reports', label: 'View Reports', description: 'Access to medical reports and history' },
     { id: 'receive_notifications', label: 'Receive Notifications', description: 'Get updates about appointments and health changes' },
     { id: 'emergency_contact', label: 'Emergency Contact', description: 'Can be contacted in case of emergency' },
+  ]
+
+  const relationshipOptions = [
+    { value: 'spouse', label: 'Spouse/Partner' },
+    { value: 'parent', label: 'Parent' },
+    { value: 'child', label: 'Child' },
+    { value: 'sibling', label: 'Sibling' },
+    { value: 'friend', label: 'Friend' },
+    { value: 'professional', label: 'Professional Caregiver' },
+    { value: 'other', label: 'Other' },
   ]
 
   const fetchProfile = useCallback(async () => {
@@ -73,6 +85,19 @@ export default function CaregiversPage() {
     fetchProfile()
     fetchCaregivers()
   }, [fetchProfile, fetchCaregivers])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   const handleAddCaregiver = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -158,7 +183,7 @@ export default function CaregiversPage() {
 
   return (
     <div className="flex">
-      <Sidebar userType={profile.user_type} userName={profile.full_name} />
+      <Sidebar userType={profile.user_type} userName={profile.full_name} activeView="caregivers" onViewChange={() => {}} />
 
       <div className="flex-1 ml-64 p-8 bg-gray-50 min-h-screen">
         <div className="max-w-6xl mx-auto">
@@ -209,7 +234,7 @@ export default function CaregiversPage() {
                       required
                       value={formData.caregiverName}
                       onChange={(e) => setFormData(prev => ({ ...prev, caregiverName: e.target.value }))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
                       placeholder="Enter caregiver's full name"
                     />
                   </div>
@@ -223,7 +248,7 @@ export default function CaregiversPage() {
                       required
                       value={formData.caregiverEmail}
                       onChange={(e) => setFormData(prev => ({ ...prev, caregiverEmail: e.target.value }))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
                       placeholder="caregiver@example.com"
                     />
                   </div>
@@ -233,21 +258,45 @@ export default function CaregiversPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Relationship
                   </label>
-                  <select
-                    required
-                    value={formData.relationship}
-                    onChange={(e) => setFormData(prev => ({ ...prev, relationship: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Select relationship</option>
-                    <option value="spouse">Spouse/Partner</option>
-                    <option value="parent">Parent</option>
-                    <option value="child">Child</option>
-                    <option value="sibling">Sibling</option>
-                    <option value="friend">Friend</option>
-                    <option value="professional">Professional Caregiver</option>
-                    <option value="other">Other</option>
-                  </select>
+                  <div className="relative" ref={dropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowDropdown(!showDropdown)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black bg-white text-left flex items-center justify-between"
+                    >
+                      <span className={formData.relationship ? 'text-black' : 'text-gray-500'}>
+                        {formData.relationship 
+                          ? relationshipOptions.find(opt => opt.value === formData.relationship)?.label 
+                          : 'Select relationship'
+                        }
+                      </span>
+                      <svg
+                        className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''}`}
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                    
+                    {showDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-xl shadow-lg max-h-60 overflow-auto">
+                        {relationshipOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({ ...prev, relationship: option.value }))
+                              setShowDropdown(false)
+                            }}
+                            className="w-full px-4 py-3 text-left text-black hover:bg-blue-50 focus:bg-blue-50 focus:outline-none first:rounded-t-xl last:rounded-b-xl"
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
