@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       reportId,
       caregiverEmails,
       includeTranscript,
+      shareTranscript,
       customMessage,
       recipientName,
     } = await request.json();
@@ -148,7 +149,10 @@ export async function POST(request: NextRequest) {
     // Update shared_caregivers field with caregiver emails if emails were successful
     if (successful.length > 0) {
       try {
-        // Get current shared_caregivers array and add new caregiver emails
+        // Get emails from successful sends
+        const successfulEmails = successful.map((result) => result.email);
+
+        // Update medical report shared_caregivers
         const { data: currentReport } = await supabase
           .from("medical_reports")
           .select("shared_caregivers")
@@ -157,8 +161,6 @@ export async function POST(request: NextRequest) {
           .single();
 
         const currentSharedCaregivers = currentReport?.shared_caregivers || [];
-        // Get emails from successful sends
-        const successfulEmails = successful.map((result) => result.email);
         const newSharedCaregivers = [
           ...new Set([...currentSharedCaregivers, ...successfulEmails]),
         ]; // Remove duplicates
@@ -171,13 +173,77 @@ export async function POST(request: NextRequest) {
 
         if (updateError) {
           console.error(
-            "❌ [DB] Failed to update shared_caregivers:",
+            "❌ [DB] Failed to update medical report shared_caregivers:",
             updateError
           );
         } else {
           console.log(
-            `✅ [DB] Updated shared_caregivers for report ${reportId} with ${successfulEmails.length} caregiver email(s): ${successfulEmails.join(", ")}`
+            `✅ [DB] Updated medical report shared_caregivers for report ${reportId} with ${successfulEmails.length} caregiver email(s): ${successfulEmails.join(", ")}`
           );
+        }
+
+        // Update transcript shared_caregivers if shareTranscript is true
+        if (shareTranscript && report.transcript_id) {
+          const { data: currentTranscript } = await supabase
+            .from("transcripts")
+            .select("shared_caregivers")
+            .eq("id", report.transcript_id)
+            .eq("user_id", user.id)
+            .single();
+
+          const currentTranscriptSharedCaregivers = currentTranscript?.shared_caregivers || [];
+          const newTranscriptSharedCaregivers = [
+            ...new Set([...currentTranscriptSharedCaregivers, ...successfulEmails]),
+          ]; // Remove duplicates
+
+          const { error: transcriptUpdateError } = await supabase
+            .from("transcripts")
+            .update({ shared_caregivers: newTranscriptSharedCaregivers })
+            .eq("id", report.transcript_id)
+            .eq("user_id", user.id);
+
+          if (transcriptUpdateError) {
+            console.error(
+              "❌ [DB] Failed to update transcript shared_caregivers:",
+              transcriptUpdateError
+            );
+          } else {
+            console.log(
+              `✅ [DB] Updated transcript shared_caregivers for transcript ${report.transcript_id} with ${successfulEmails.length} caregiver email(s): ${successfulEmails.join(", ")}`
+            );
+          }
+        }
+
+        // Create sharing events for timeline tracking
+        for (const email of successfulEmails) {
+          const sharingType = shareTranscript ? 'both' : 'medical_report';
+
+          try {
+            const { error: sharingEventError } = await supabase
+              .from("sharing_events")
+              .insert({
+                medical_report_id: reportId,
+                transcript_id: shareTranscript ? report.transcript_id : null,
+                shared_by_user_id: user.id,
+                shared_with_email: email,
+                sharing_type: sharingType,
+                included_in_email: includeTranscript,
+                custom_message: customMessage?.trim() || null,
+              });
+
+            if (sharingEventError) {
+              console.error(
+                `❌ [DB] Failed to create sharing event for ${email}:`,
+                sharingEventError
+              );
+            } else {
+              console.log(
+                `✅ [DB] Created sharing event for report ${reportId} shared with ${email}`
+              );
+            }
+          } catch (eventError) {
+            console.error("❌ [DB] Error creating sharing event:", eventError);
+          }
         }
       } catch (dbError) {
         console.error("❌ [DB] Error updating shared_caregivers:", dbError);

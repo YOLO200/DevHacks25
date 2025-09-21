@@ -70,6 +70,7 @@ export default function DashboardPage() {
   const [sharedReports, setSharedReports] = useState<any[]>([]);
   const [sharedTranscripts, setSharedTranscripts] = useState<any[]>([]);
   const [sharedRecordings, setSharedRecordings] = useState<any[]>([]);
+  const [sharingEvents, setSharingEvents] = useState<any[]>([]);
   const [expandedSharedReport, setExpandedSharedReport] = useState<
     string | null
   >(null);
@@ -375,7 +376,7 @@ export default function DashboardPage() {
       } = await supabase.auth.getUser();
 
       if (user && profile?.email) {
-        const { data, error } = await supabase
+        const { data: reports, error } = await supabase
           .from("medical_reports")
           .select(
             `
@@ -416,10 +417,29 @@ export default function DashboardPage() {
           return;
         }
 
-        console.log(
-          `📊 [CAREGIVER] Fetched ${data?.length || 0} shared medical reports`
-        );
-        setSharedReports((data || []) as any);
+        if (reports && reports.length > 0) {
+          // Get unique user IDs
+          const userIds = [...new Set(reports.map(r => r.user_id))];
+
+          // Fetch user profiles for these user IDs
+          const { data: userProfiles } = await supabase
+            .from("user_profiles")
+            .select("id, full_name, email")
+            .in("id", userIds);
+
+          // Merge user profiles with reports
+          const reportsWithProfiles = reports.map(report => ({
+            ...report,
+            user_profiles: userProfiles?.find(profile => profile.id === report.user_id) || null
+          }));
+
+          console.log(
+            `📊 [CAREGIVER] Fetched ${reportsWithProfiles.length} shared medical reports`
+          );
+          setSharedReports(reportsWithProfiles as any);
+        } else {
+          setSharedReports([]);
+        }
       }
     } catch (error) {
       console.error("Error fetching shared reports:", error);
@@ -435,7 +455,7 @@ export default function DashboardPage() {
       } = await supabase.auth.getUser();
 
       if (user && profile?.email) {
-        // Get transcripts that are associated with shared medical reports
+        // Get transcripts that are directly shared with this caregiver
         const { data: transcripts, error: transcriptsError } = await supabase
           .from("transcripts")
           .select(
@@ -447,6 +467,7 @@ export default function DashboardPage() {
               structured_transcript,
               status,
               retry_count,
+              shared_caregivers,
               created_at,
               updated_at,
               recordings (
@@ -457,23 +478,34 @@ export default function DashboardPage() {
               )
             `
           )
+          .contains("shared_caregivers", [profile.email])
           .order("created_at", { ascending: false });
 
         if (transcriptsError) {
-          console.error("Error fetching transcripts:", transcriptsError);
+          console.error("Error fetching shared transcripts:", transcriptsError);
           setSharedTranscripts([]);
           setSharedRecordings([]);
           return;
         }
 
-        // Filter transcripts that are associated with shared medical reports
-        const sharedTranscripts =
-          transcripts?.filter((transcript) => {
-            // Check if this transcript is associated with a shared medical report
-            return sharedReports.some(
-              (report) => report.transcript_id === transcript.id
-            );
-          }) || [];
+        // Add user profiles to shared transcripts
+        let sharedTranscripts = transcripts || [];
+        if (transcripts && transcripts.length > 0) {
+          // Get unique user IDs
+          const userIds = [...new Set(transcripts.map(t => t.user_id))];
+
+          // Fetch user profiles for these user IDs
+          const { data: userProfiles } = await supabase
+            .from("user_profiles")
+            .select("id, full_name, email")
+            .in("id", userIds);
+
+          // Merge user profiles with transcripts
+          sharedTranscripts = transcripts.map(transcript => ({
+            ...transcript,
+            user_profiles: userProfiles?.find(profile => profile.id === transcript.user_id) || null
+          }));
+        }
 
         // Get unique recordings from shared transcripts
         const sharedRecordingIds = [
@@ -485,20 +517,35 @@ export default function DashboardPage() {
         if (sharedRecordingIds.length > 0) {
           const { data: recordings, error: recordingsError } = await supabase
             .from("recordings")
-            .select("id, title, duration, created_at")
+            .select(`
+              id,
+              title,
+              duration,
+              created_at,
+              user_id
+            `)
             .in("id", sharedRecordingIds);
 
           if (recordingsError) {
             console.error("Error fetching shared recordings:", recordingsError);
             setSharedRecordings([]);
-          } else {
-            // Transform recordings to match expected format
-            const transformedRecordings =
-              recordings?.map((recording) => ({
-                ...recording,
-                type: "appointment",
-                date: recording.created_at,
-              })) || [];
+          } else if (recordings && recordings.length > 0) {
+            // Get unique user IDs
+            const userIds = [...new Set(recordings.map(r => r.user_id))];
+
+            // Fetch user profiles for these user IDs
+            const { data: userProfiles } = await supabase
+              .from("user_profiles")
+              .select("id, full_name, email")
+              .in("id", userIds);
+
+            // Transform recordings to match expected format and add user profiles
+            const transformedRecordings = recordings.map((recording) => ({
+              ...recording,
+              type: "appointment",
+              date: recording.created_at,
+              user_profiles: userProfiles?.find(profile => profile.id === recording.user_id) || null
+            }));
             setSharedRecordings(transformedRecordings);
           }
         } else {
@@ -515,7 +562,155 @@ export default function DashboardPage() {
       setSharedTranscripts([]);
       setSharedRecordings([]);
     }
-  }, [supabase, profile?.email, sharedReports]);
+  }, [supabase, profile?.email]);
+
+  // Fetch sharing events (for caregivers timeline)
+  const fetchSharingEvents = useCallback(async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user && profile?.email) {
+        // Try to fetch from sharing_events table first
+        const { data: events, error: eventsError } = await supabase
+          .from("sharing_events")
+          .select(`
+            id,
+            medical_report_id,
+            transcript_id,
+            shared_by_user_id,
+            shared_with_email,
+            sharing_type,
+            included_in_email,
+            custom_message,
+            shared_at,
+            created_at,
+            medical_reports (
+              id,
+              recordings (
+                title
+              )
+            )
+          `)
+          .eq("shared_with_email", profile.email)
+          .order("shared_at", { ascending: false });
+
+        // If sharing_events table doesn't exist, create synthetic events from shared reports
+        if (eventsError && eventsError.code === 'PGRST205') {
+          console.log("📅 [CAREGIVER] sharing_events table not found, creating timeline from shared reports");
+
+          // Fetch shared reports to create synthetic timeline entries
+          const { data: reports, error: reportsError } = await supabase
+            .from("medical_reports")
+            .select(`
+              id,
+              transcript_id,
+              user_id,
+              shared_caregivers,
+              updated_at,
+              recordings (
+                id,
+                title
+              )
+            `)
+            .contains("shared_caregivers", [profile.email])
+            .order("updated_at", { ascending: false });
+
+          if (reportsError) {
+            console.error("Error fetching shared reports for timeline:", reportsError);
+            setSharingEvents([]);
+            return;
+          }
+
+          if (reports && reports.length > 0) {
+            // Get unique user IDs
+            const userIds = [...new Set(reports.map(r => r.user_id))];
+
+            // Fetch user profiles
+            const { data: userProfiles } = await supabase
+              .from("user_profiles")
+              .select("id, full_name, email")
+              .in("id", userIds);
+
+            // Check which transcripts are also shared
+            const { data: sharedTranscripts } = await supabase
+              .from("transcripts")
+              .select("id, shared_caregivers")
+              .contains("shared_caregivers", [profile.email]);
+
+            // Create synthetic events
+            const syntheticEvents = reports.map(report => {
+              const transcriptShared = sharedTranscripts?.some(t =>
+                t.id === report.transcript_id &&
+                t.shared_caregivers?.includes(profile.email)
+              ) || false;
+
+              return {
+                id: `synthetic-${report.id}`,
+                medical_report_id: report.id,
+                transcript_id: transcriptShared ? report.transcript_id : null,
+                shared_by_user_id: report.user_id,
+                shared_with_email: profile.email,
+                sharing_type: transcriptShared ? 'both' : 'medical_report',
+                included_in_email: false,
+                custom_message: null,
+                shared_at: report.updated_at,
+                created_at: report.updated_at,
+                medical_reports: {
+                  id: report.id,
+                  recordings: report.recordings
+                },
+                sharer_profile: userProfiles?.find(p => p.id === report.user_id) || null,
+                is_synthetic: true
+              };
+            });
+
+            console.log(
+              `📅 [CAREGIVER] Created ${syntheticEvents.length} synthetic timeline events from shared reports`
+            );
+            setSharingEvents(syntheticEvents);
+          } else {
+            setSharingEvents([]);
+          }
+          return;
+        }
+
+        if (eventsError) {
+          console.error("Error fetching sharing events:", eventsError);
+          setSharingEvents([]);
+          return;
+        }
+
+        if (events && events.length > 0) {
+          // Get unique user IDs of sharers
+          const userIds = [...new Set(events.map(e => e.shared_by_user_id))];
+
+          // Fetch user profiles for sharers
+          const { data: userProfiles } = await supabase
+            .from("user_profiles")
+            .select("id, full_name, email")
+            .in("id", userIds);
+
+          // Merge user profiles with events
+          const eventsWithProfiles = events.map(event => ({
+            ...event,
+            sharer_profile: userProfiles?.find(profile => profile.id === event.shared_by_user_id) || null
+          }));
+
+          console.log(
+            `📅 [CAREGIVER] Fetched ${eventsWithProfiles.length} sharing events`
+          );
+          setSharingEvents(eventsWithProfiles);
+        } else {
+          setSharingEvents([]);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching sharing events:", error);
+      setSharingEvents([]);
+    }
+  }, [supabase, profile?.email]);
 
   // Fetch caregivers function
   const fetchCaregivers = useCallback(async () => {
@@ -952,13 +1147,10 @@ export default function DashboardPage() {
   useEffect(() => {
     if (activeView === "reports") {
       if (profile?.user_type === "caregiver") {
-        // For caregivers, fetch shared data
-        // First fetch shared reports, then transcripts (which depend on reports)
-        const fetchCaregiverData = async () => {
-          await fetchSharedReports();
-          await fetchSharedTranscripts();
-        };
-        fetchCaregiverData();
+        // For caregivers, fetch shared data independently
+        fetchSharedReports();
+        fetchSharedTranscripts();
+        fetchSharingEvents();
       } else {
         // For patients, fetch their own data
         fetchRecordings(); // Fetch recordings for timeline
@@ -984,6 +1176,7 @@ export default function DashboardPage() {
     fetchCaregivers,
     fetchSharedReports,
     fetchSharedTranscripts,
+    fetchSharingEvents,
   ]);
 
   // Periodic refresh for transcripts in progress
@@ -1220,7 +1413,7 @@ export default function DashboardPage() {
                                       </p>
                                       <div className="flex items-center mt-1">
                                         <span className="px-2 py-1 text-xs rounded-full font-medium bg-green-100 text-green-800">
-                                          Shared Report
+                                          Shared by {report.user_profiles?.full_name || report.user_profiles?.email || 'Patient'}
                                         </span>
                                         <span className="px-2 py-1 text-xs rounded-full font-medium bg-blue-100 text-blue-800 ml-2">
                                           {report.status}
@@ -1407,7 +1600,7 @@ export default function DashboardPage() {
                                       </p>
                                       <div className="flex items-center mt-1">
                                         <span className="px-2 py-1 text-xs rounded-full font-medium bg-green-100 text-green-800">
-                                          Shared Transcript
+                                          Shared by {transcript.user_profiles?.full_name || transcript.user_profiles?.email || 'Patient'}
                                         </span>
                                         <span
                                           className={`ml-2 px-2 py-1 text-xs rounded-full font-medium ${
@@ -1581,66 +1774,79 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                {/* Shared Timeline Tab */}
+                {/* Shared Reports Timeline Tab */}
                 {activeTab === "timeline" && (
                   <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
                     <div className="p-6 border-b border-gray-200">
                       <h3 className="text-xl font-bold text-gray-900">
-                        Shared Recordings Timeline
+                        Shared Reports Timeline
                       </h3>
                       <p className="text-gray-600 mt-1">
-                        Recordings shared with you by patients in chronological
-                        order
+                        Timeline of when medical reports were shared with you
                       </p>
                     </div>
 
-                    {sharedRecordings.length === 0 ? (
+                    {sharingEvents.length === 0 ? (
                       <div className="p-6">
                         <div className="text-center py-12">
                           <div className="w-16 h-16 bg-purple-100 rounded-full mx-auto mb-4 flex items-center justify-center">
                             <span className="text-2xl">📅</span>
                           </div>
                           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                            No shared recordings yet
+                            No sharing events yet
                           </h3>
                           <p className="text-gray-600 mb-6">
-                            Recordings shared with you will appear here in
-                            timeline format.
+                            When patients share reports with you, they will appear here in chronological order.
                           </p>
                         </div>
                       </div>
                     ) : (
                       <div className="p-6">
                         <div className="space-y-4">
-                          {sharedRecordings.map((recording) => (
+                          {sharingEvents.map((event) => (
                             <div
-                              key={recording.id}
+                              key={event.id}
                               className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
                             >
-                              <div className="flex items-center p-4">
-                                <div className="flex-1">
-                                  <div className="flex items-center space-x-3">
-                                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                                      <span className="text-lg">🎙️</span>
-                                    </div>
-                                    <div className="flex-1">
-                                      <h4 className="font-medium text-gray-900">
-                                        {recording.title}
-                                      </h4>
-                                      <p className="text-sm text-gray-500">
-                                        {formatDate(recording.created_at)}
-                                        {recording.duration && (
-                                          <span className="ml-2">
-                                            • {formatTime(recording.duration)}
-                                          </span>
-                                        )}
-                                      </p>
-                                      <div className="flex items-center mt-1">
-                                        <span className="px-2 py-1 text-xs rounded-full font-medium bg-purple-100 text-purple-800">
-                                          Shared Recording
+                              <div className="p-4">
+                                <div className="flex items-start space-x-3">
+                                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <span className="text-lg">
+                                      {event.sharing_type === 'both' ? '📋+📝' : event.sharing_type === 'transcript' ? '📝' : '📋'}
+                                    </span>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-gray-900 truncate">
+                                      {event.medical_reports?.recordings?.title || 'Medical Report'}
+                                    </h4>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      Shared by <span className="font-medium">
+                                        {event.sharer_profile?.full_name || event.sharer_profile?.email || 'Patient'}
+                                      </span>
+                                    </p>
+                                    <div className="flex items-center mt-2 space-x-2">
+                                      <span className="px-2 py-1 text-xs rounded-full font-medium bg-green-100 text-green-800">
+                                        {event.sharing_type === 'both' ? 'Report + Transcript' :
+                                         event.sharing_type === 'transcript' ? 'Transcript Only' : 'Report Only'}
+                                      </span>
+                                      {event.included_in_email && (
+                                        <span className="px-2 py-1 text-xs rounded-full font-medium bg-blue-100 text-blue-800">
+                                          📧 Included in Email
                                         </span>
-                                      </div>
+                                      )}
                                     </div>
+                                    {event.custom_message && (
+                                      <div className={`mt-2 p-2 rounded text-xs italic ${
+                                        event.is_synthetic
+                                          ? 'bg-blue-50 text-blue-600'
+                                          : 'bg-gray-50 text-gray-600'
+                                      }`}>
+                                        "{event.custom_message}"
+                                      </div>
+                                    )}
+                                    <p className="text-xs text-gray-500 mt-2">
+                                      {formatDate(event.shared_at)}
+                                    </p>
                                   </div>
                                 </div>
                               </div>
