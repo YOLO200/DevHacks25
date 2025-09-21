@@ -164,24 +164,24 @@ function LoginForm() {
   const config = userTypeConfig[userType];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200 flex items-center justify-center px-4 py-8">
       <div className="max-w-md w-full">
         {/* User Type Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6 sm:mb-8">
           <div
-            className={`inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r ${config.color} text-white shadow-lg mb-4`}
+            className={`inline-flex items-center px-3 sm:px-4 py-2 rounded-full bg-gradient-to-r ${config.color} text-white shadow-lg mb-3 sm:mb-4`}
           >
-            <span className="font-semibold">{config.title}</span>
+            <span className="font-semibold text-sm sm:text-base">{config.title}</span>
           </div>
-          <h1 className={`text-3xl font-bold mb-2 ${userType === 'caregiver' ? 'text-green-700' : 'text-blue-700'}`}>
+          <h1 className={`text-2xl sm:text-3xl font-bold mb-2 ${userType === 'caregiver' ? 'text-green-700' : 'text-blue-700'}`}>
             {isSignUp ? "Create Account" : "Welcome Back"}
           </h1>
-          <p className={userType === 'caregiver' ? 'text-green-600' : 'text-blue-600'}>{config.description}</p>
+          <p className={`text-sm sm:text-base ${userType === 'caregiver' ? 'text-green-600' : 'text-blue-600'}`}>{config.description}</p>
         </div>
 
         {/* Login Form */}
-        <div className={`bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 border ${userType === 'caregiver' ? 'border-green-300' : 'border-blue-300'}`}>
-          <form onSubmit={handleAuth} className="space-y-6">
+        <div className={`bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 border ${userType === 'caregiver' ? 'border-green-300' : 'border-blue-300'}`}>
+          <form onSubmit={handleAuth} className="space-y-4 sm:space-y-6">
             {isSignUp && (
               <>
                 <div>
@@ -194,7 +194,7 @@ function LoginForm() {
                     required={isSignUp}
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all text-gray-900 ${
+                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all text-gray-900 text-sm sm:text-base ${
                       userType === 'caregiver' 
                         ? 'border-green-300 focus:ring-green-500' 
                         : 'border-blue-300 focus:ring-blue-500'
@@ -215,7 +215,7 @@ function LoginForm() {
                       const formatted = formatPhoneNumber(e.target.value);
                       setPhoneNumber(formatted);
                     }}
-                    className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all text-gray-900 ${
+                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all text-gray-900 text-sm sm:text-base ${
                       userType === 'caregiver' 
                         ? 'border-green-300 focus:ring-green-500' 
                         : 'border-blue-300 focus:ring-blue-500'
@@ -245,7 +245,7 @@ function LoginForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all text-sm sm:text-base ${
                   userType === 'caregiver' 
                     ? 'border-green-200 focus:ring-green-300' 
                     : 'border-blue-200 focus:ring-blue-300'
@@ -267,7 +267,7 @@ function LoginForm() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all text-sm sm:text-base ${
                   userType === 'caregiver' 
                     ? 'border-green-200 focus:ring-green-300' 
                     : 'border-blue-200 focus:ring-blue-300'
@@ -282,18 +282,18 @@ function LoginForm() {
 
             {/* User Type Display */}
             <div
-              className={`p-4 rounded-xl ${config.bgColor} border-2 border-opacity-50`}
+              className={`p-3 sm:p-4 rounded-xl ${config.bgColor} border-2 border-opacity-50`}
             >
               <div>
-                <div className={`font-semibold ${userType === 'caregiver' ? 'text-green-700' : 'text-blue-700'}`}>
+                <div className={`font-semibold text-sm sm:text-base ${userType === 'caregiver' ? 'text-green-700' : 'text-blue-700'}`}>
                   Signing up as{" "}
                   {userType === "patient" ? "Patient" : "Caregiver"}
                 </div>
-                <div className={`text-sm ${userType === 'caregiver' ? 'text-green-600' : 'text-blue-600'}`}>{config.subtitle}</div>
+                <div className={`text-xs sm:text-sm ${userType === 'caregiver' ? 'text-green-600' : 'text-blue-600'}`}>{config.subtitle}</div>
               </div>
               <Link
                 href="/"
-                className={`text-sm mt-2 inline-block ${userType === 'caregiver' ? 'text-green-400 hover:text-green-300' : 'text-blue-400 hover:text-blue-300'}`}
+                className={`text-xs sm:text-sm mt-2 inline-block ${userType === 'caregiver' ? 'text-green-400 hover:text-green-300' : 'text-blue-400 hover:text-blue-300'}`}
               >
                 ← Change user type
               </Link>
@@ -315,7 +315,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full py-3 px-4 bg-gradient-to-r ${config.color} text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
+              className={`w-full py-2.5 sm:py-3 px-4 bg-gradient-to-r ${config.color} text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm sm:text-base`}
             >
               {isLoading
                 ? "Loading..."
@@ -325,7 +325,7 @@ function LoginForm() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-4 sm:mt-6 text-center">
             <button
               type="button"
               onClick={() => {
@@ -334,7 +334,7 @@ function LoginForm() {
                 setFullName("");
                 setPhoneNumber("");
               }}
-              className={`transition-colors ${userType === 'caregiver' ? 'text-green-600 hover:text-green-700' : 'text-blue-600 hover:text-blue-700'}`}
+              className={`transition-colors text-sm sm:text-base ${userType === 'caregiver' ? 'text-green-600 hover:text-green-700' : 'text-blue-600 hover:text-blue-700'}`}
             >
               {isSignUp
                 ? "Already have an account? Sign In"
@@ -344,10 +344,10 @@ function LoginForm() {
         </div>
 
         {/* Back to Home */}
-        <div className="text-center mt-6">
+        <div className="text-center mt-4 sm:mt-6">
           <Link
             href="/"
-            className={`transition-colors ${userType === 'caregiver' ? 'text-green-600 hover:text-green-700' : 'text-blue-600 hover:text-blue-700'}`}
+            className={`transition-colors text-sm sm:text-base ${userType === 'caregiver' ? 'text-green-600 hover:text-green-700' : 'text-blue-600 hover:text-blue-700'}`}
           >
             ← Back to Home
           </Link>
