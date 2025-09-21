@@ -10,7 +10,7 @@ export default function AuthErrorBoundary({ children }: { children: React.ReactN
 
     // Listen for auth state changes and handle errors
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event) => {
+      async (event, session) => {
         if (event === 'TOKEN_REFRESHED') {
           console.log('Token refreshed successfully')
         }

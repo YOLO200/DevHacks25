@@ -76,7 +76,7 @@ export default function PatientsPage() {
       } = await supabase.auth.getUser();
 
       if (user) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("user_profiles")
           .select("full_name, user_type, email")
           .eq("id", user.id)
@@ -99,6 +99,13 @@ export default function PatientsPage() {
       }
 
 
+      // First, let's check if there are any caregiver_relationships at all
+      const { data: allRelationships, error: allError } = await supabase
+        .from("caregiver_relationships")
+        .select("*");
+
+      if (allError)
+        console.error("Error fetching all relationships:", allError);
 
       // Fetch invitations where caregiver_email matches current user's email and status is pending
       const { data: invitationData, error: invitationError } = await supabase
@@ -127,8 +134,12 @@ export default function PatientsPage() {
       ];
 
 
-      let patientProfiles: Record<string, { id: string; full_name: string; email: string }> = {};
+      let patientProfiles = {};
       if (patientIds.length > 0) {
+        // First, let's try to fetch all user profiles to see what's available
+        const { data: allProfiles, error: allProfilesError } = await supabase
+          .from("user_profiles")
+          .select("id, full_name, email, user_type");
 
 
         // Now try to fetch the specific patient profiles
@@ -141,7 +152,7 @@ export default function PatientsPage() {
           console.error("Error fetching patient profiles:", profilesError);
 
         // Create a lookup object
-        patientProfiles = (profiles || []).reduce((acc: Record<string, { id: string; full_name: string; email: string }>, profile: { id: string; full_name: string; email: string }) => {
+        patientProfiles = (profiles || []).reduce((acc, profile) => {
           acc[profile.id] = profile;
           return acc;
         }, {});
@@ -213,7 +224,7 @@ export default function PatientsPage() {
 
       if (response === "accepted") {
         alert(
-          "Invitation accepted! You can now access this patient&apos;s information."
+          "Invitation accepted! You can now access this patient's information."
         );
       } else {
         alert("Invitation declined.");
@@ -264,7 +275,7 @@ export default function PatientsPage() {
     }
   };
 
-  const viewPatientReports = () => {
+  const viewPatientReports = (patientId: string) => {
     window.location.href = '/reports';
   };
 
@@ -500,7 +511,7 @@ export default function PatientsPage() {
                 </h4>
                 <p className="text-gray-600 mb-6">
                   Patients will need to invite you to become their caregiver.
-                  Once invited, you&apos;ll see their invitations here.
+                  Once invited, you'll see their invitations here.
                 </p>
               </div>
             ) : existingPatients.length === 0 ? (
@@ -553,7 +564,9 @@ export default function PatientsPage() {
                             View Profile
                           </button>
                           <button
-                            onClick={() => viewPatientReports()}
+                            onClick={() =>
+                              viewPatientReports(patient.patient_id)
+                            }
                             className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
                           >
                             View Reports
@@ -689,7 +702,7 @@ export default function PatientsPage() {
                     <button
                       onClick={() => {
                         setShowProfileModal(false);
-                        viewPatientReports();
+                        viewPatientReports(selectedPatient.patient_id);
                       }}
                       className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >

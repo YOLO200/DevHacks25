@@ -7,6 +7,7 @@ import Sidebar from '@/components/Sidebar'
 interface Patient {
   id: string
   patient_name: string
+  patient_email: string
   relationship: string
 }
 
@@ -52,6 +53,7 @@ export default function CareRemindersPage() {
   const [selectedPatientId, setSelectedPatientId] = useState<string>('')
   const [showReminderForm, setShowReminderForm] = useState(false)
   const [showCallForm, setShowCallForm] = useState(false)
+  const [selectedReminder, setSelectedReminder] = useState<CareReminder | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showEditReminderForm, setShowEditReminderForm] = useState(false)
   const [showCallSummaryModal, setShowCallSummaryModal] = useState(false)
@@ -103,7 +105,7 @@ export default function CareRemindersPage() {
     return null
   }, [supabase])
 
-  const fetchPatients = useCallback(async (profileData: { email: string } | null) => {
+  const fetchPatients = useCallback(async (profileData: any) => {
     if (!profileData?.email) return
 
     try {
@@ -119,19 +121,20 @@ export default function CareRemindersPage() {
         const patientIds = data.map(item => item.patient_id)
         const { data: profiles, error: profilesError } = await supabase
           .from('user_profiles')
-          .select('id, full_name')
+          .select('id, full_name, email')
           .in('id', patientIds)
 
         if (profilesError) throw profilesError
 
-        const profilesMap = (profiles || []).reduce((acc: Record<string, { id: string; full_name: string }>, profile) => {
+        const profilesMap = (profiles || []).reduce((acc: any, profile: any) => {
           acc[profile.id] = profile
           return acc
-        }, {} as Record<string, { id: string; full_name: string }>)
+        }, {})
 
         const transformedPatients = data.map(item => ({
           id: item.patient_id,
           patient_name: profilesMap[item.patient_id]?.full_name || 'Unknown Patient',
+          patient_email: profilesMap[item.patient_id]?.email || 'Unknown Email',
           relationship: item.relationship
         }))
 
@@ -165,10 +168,10 @@ export default function CareRemindersPage() {
 
         if (profilesError) throw profilesError
 
-        const profilesMap = (profiles || []).reduce((acc: Record<string, { id: string; full_name: string }>, profile) => {
+        const profilesMap = (profiles || []).reduce((acc: any, profile: any) => {
           acc[profile.id] = profile
           return acc
-        }, {} as Record<string, { id: string; full_name: string }>)
+        }, {})
 
         const transformedReminders = data.map(item => ({
           ...item,
@@ -205,10 +208,10 @@ export default function CareRemindersPage() {
 
         if (profilesError) throw profilesError
 
-        const profilesMap = (profiles || []).reduce((acc: Record<string, { id: string; full_name: string }>, profile) => {
+        const profilesMap = (profiles || []).reduce((acc: any, profile: any) => {
           acc[profile.id] = profile
           return acc
-        }, {} as Record<string, { id: string; full_name: string }>)
+        }, {})
 
         const transformedCallLogs = data.map(item => ({
           ...item,
@@ -353,7 +356,8 @@ export default function CareRemindersPage() {
       setCallForm({
         reminder_id: '',
         patient_id: '',
-        scheduled_time: '',
+        call_date: '',
+        call_time: '',
         call_duration: 0,
         status: 'completed',
         call_summary: '',
@@ -417,6 +421,14 @@ export default function CareRemindersPage() {
     })
   }
 
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
 
   const getPatientColor = (patientId: string) => {
     const colors = [
@@ -481,6 +493,20 @@ export default function CareRemindersPage() {
     }
   }
 
+  const getDayString = (reminder: CareReminder) => {
+    const days = []
+    if (reminder.monday) days.push('Mon')
+    if (reminder.tuesday) days.push('Tue')
+    if (reminder.wednesday) days.push('Wed')
+    if (reminder.thursday) days.push('Thu')
+    if (reminder.friday) days.push('Fri')
+    if (reminder.saturday) days.push('Sat')
+    if (reminder.sunday) days.push('Sun')
+
+    if (days.length === 7) return 'Every day'
+    if (days.length === 0) return 'No days selected'
+    return days.join(', ')
+  }
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentMonth(prev => {
