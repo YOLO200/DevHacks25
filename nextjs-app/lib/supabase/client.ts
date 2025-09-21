@@ -9,8 +9,6 @@ export function createClient() {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        // Add retry logic for network failures
-        retryInterval: 3000,
         // Handle network errors gracefully
         storage: typeof window !== 'undefined' ? window.localStorage : undefined,
       },

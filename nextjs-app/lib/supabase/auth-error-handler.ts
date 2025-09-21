@@ -1,4 +1,4 @@
-export function handleAuthError(error: any) {
+export function handleAuthError(error: unknown) {
   // Check if it's a network error
   if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
     console.warn('Network connectivity issue detected. This is likely temporary.')
@@ -10,7 +10,7 @@ export function handleAuthError(error: any) {
   }
 
   // Check if it's an authentication refresh error
-  if (error?.message?.includes('refresh') || error?.message?.includes('token')) {
+  if ((error as Error)?.message?.includes('refresh') || (error as Error)?.message?.includes('token')) {
     console.warn('Authentication token refresh failed. User may need to re-authenticate.')
     return {
       isAuthError: true,
@@ -34,7 +34,7 @@ export async function retryWithBackoff<T>(
   maxRetries: number = 3,
   baseDelay: number = 1000
 ): Promise<T> {
-  let lastError: any
+  let lastError: unknown
 
   for (let i = 0; i < maxRetries; i++) {
     try {
