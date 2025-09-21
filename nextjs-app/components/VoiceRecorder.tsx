@@ -16,9 +16,10 @@ interface Recording {
 
 interface VoiceRecorderProps {
   userId: string
+  autoStart?: boolean
 }
 
-export default function VoiceRecorder({ userId }: VoiceRecorderProps) {
+export default function VoiceRecorder({ userId, autoStart = false }: VoiceRecorderProps) {
   const [isRecording, setIsRecording] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [recordings, setRecordings] = useState<Recording[]>([])
@@ -27,10 +28,20 @@ export default function VoiceRecorder({ userId }: VoiceRecorderProps) {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [renamingRecording, setRenamingRecording] = useState<string | null>(null)
   const [newName, setNewName] = useState<string>('')
+  
+  // Audio playback state
+  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [playingRecordingId, setPlayingRecordingId] = useState<string | null>(null)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [playbackProgress, setPlaybackProgress] = useState(0)
+  
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -86,6 +97,19 @@ export default function VoiceRecorder({ userId }: VoiceRecorderProps) {
   useEffect(() => {
     fetchRecordings()
   }, [fetchRecordings])
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (currentAudio) {
+        currentAudio.pause()
+        currentAudio.currentTime = 0
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+      }
+    }
+  }, [currentAudio])
 
   // Periodic refresh for recordings in progress
   useEffect(() => {
@@ -188,18 +212,100 @@ export default function VoiceRecorder({ userId }: VoiceRecorderProps) {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
-  const playRecording = async (filePath: string) => {
+  const playRecording = async (filePath: string, recordingId: string) => {
     try {
+      // Stop any currently playing audio
+      if (currentAudio) {
+        currentAudio.pause()
+        currentAudio.currentTime = 0
+        setIsPlaying(false)
+        setPlayingRecordingId(null)
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current)
+        }
+      }
+
       const { data } = await supabase.storage
         .from("doctor's note")
         .createSignedUrl(filePath, 3600) // 1 hour expiry
 
       if (data?.signedUrl) {
         const audio = new Audio(data.signedUrl)
-        audio.play()
+        
+        // Set up audio event listeners
+        audio.addEventListener('loadedmetadata', () => {
+          setDuration(audio.duration)
+        })
+        
+        audio.addEventListener('timeupdate', () => {
+          setCurrentTime(audio.currentTime)
+          setPlaybackProgress((audio.currentTime / audio.duration) * 100)
+        })
+        
+        audio.addEventListener('ended', () => {
+          setIsPlaying(false)
+          setPlayingRecordingId(null)
+          setCurrentTime(0)
+          setPlaybackProgress(0)
+          if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current)
+          }
+        })
+        
+        audio.addEventListener('error', (e) => {
+          console.error('Audio playback error:', e)
+          setIsPlaying(false)
+          setPlayingRecordingId(null)
+        })
+        
+        setCurrentAudio(audio)
+        setPlayingRecordingId(recordingId)
+        setIsPlaying(true)
+        await audio.play()
       }
     } catch (error) {
       console.error('Error playing recording:', error)
+      setIsPlaying(false)
+      setPlayingRecordingId(null)
+    }
+  }
+
+  const pausePlayback = () => {
+    if (currentAudio && isPlaying) {
+      currentAudio.pause()
+      setIsPlaying(false)
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+      }
+    }
+  }
+
+  const resumePlayback = () => {
+    if (currentAudio && !isPlaying) {
+      currentAudio.play()
+      setIsPlaying(true)
+    }
+  }
+
+  const stopPlayback = () => {
+    if (currentAudio) {
+      currentAudio.pause()
+      currentAudio.currentTime = 0
+      setIsPlaying(false)
+      setPlayingRecordingId(null)
+      setCurrentTime(0)
+      setPlaybackProgress(0)
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+      }
+    }
+  }
+
+  const seekTo = (time: number) => {
+    if (currentAudio) {
+      currentAudio.currentTime = time
+      setCurrentTime(time)
+      setPlaybackProgress((time / duration) * 100)
     }
   }
 
@@ -292,18 +398,18 @@ export default function VoiceRecorder({ userId }: VoiceRecorderProps) {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 border border-blue-100">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-xl mr-4">
-            🎙️
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">Doctor Visit Recorder</h3>
-            <p className="text-gray-600 text-sm">Record and store your medical appointments</p>
-          </div>
+    <div className="p-8 bg-gray-50 min-h-screen">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Doctor Visit Recorder
+          </h1>
+          <p className="text-gray-600">
+            Record and store your medical appointments
+          </p>
         </div>
-      </div>
+        
+        <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
 
       {/* Recording Controls */}
       <div className="flex flex-col items-center mb-6">
@@ -334,7 +440,7 @@ export default function VoiceRecorder({ userId }: VoiceRecorderProps) {
               <button
                 onClick={startRecording}
                 disabled={isUploading}
-                className="flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center px-8 py-4 bg-white/30 backdrop-blur-lg rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 border border-blue-300/50 text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
@@ -345,7 +451,7 @@ export default function VoiceRecorder({ userId }: VoiceRecorderProps) {
               <button
                 onClick={triggerFileUpload}
                 disabled={isUploading}
-                className="flex items-center justify-center px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center px-8 py-4 bg-white/30 backdrop-blur-lg rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 border border-green-300/50 text-green-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -366,10 +472,10 @@ export default function VoiceRecorder({ userId }: VoiceRecorderProps) {
               {/* Pause/Resume Button */}
               <button
                 onClick={isPaused ? resumeRecording : pauseRecording}
-                className={`flex items-center justify-center px-6 py-3 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 ${
+                className={`flex items-center justify-center px-8 py-4 bg-white/30 backdrop-blur-lg rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 ${
                   isPaused 
-                    ? 'bg-gradient-to-r from-green-600 to-emerald-600' 
-                    : 'bg-gradient-to-r from-orange-600 to-amber-600'
+                    ? 'border border-green-300/50 text-green-700' 
+                    : 'border border-orange-300/50 text-orange-700'
                 }`}
               >
                 {isPaused ? (
@@ -392,7 +498,7 @@ export default function VoiceRecorder({ userId }: VoiceRecorderProps) {
               {/* Stop Button */}
               <button
                 onClick={stopRecording}
-                className="flex items-center justify-center px-6 py-3 bg-red-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                className="flex items-center justify-center px-8 py-4 bg-white/30 backdrop-blur-lg rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 border border-red-300/50 text-red-700"
               >
                 <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
@@ -429,102 +535,155 @@ export default function VoiceRecorder({ userId }: VoiceRecorderProps) {
         )}
       </div>
 
-      {/* Recordings List */}
-      {recordings.length > 0 && (
-        <div>
-          <h4 className="text-lg font-semibold text-gray-900 mb-4">Your Recordings</h4>
-          <div className="space-y-3">
-            {recordings.map((recording) => (
-              <div key={recording.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                    {recording.title.includes('Uploaded') ? '📁' : '🎵'}
+        {/* Recordings List */}
+        {recordings.length > 0 && (
+          <div>
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Your Recordings</h4>
+            <div className="space-y-3">
+              {recordings.map((recording) => (
+                <div key={recording.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                      {recording.title.includes('Uploaded') ? '📁' : '🎵'}
+                    </div>
+                    <div className="flex-1">
+                      {renamingRecording === recording.id ? (
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveRecordingName(recording.id)
+                              if (e.key === 'Escape') cancelRenaming()
+                            }}
+                            autoFocus
+                          />
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => saveRecordingName(recording.id)}
+                              className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={cancelRenaming}
+                              className="px-2 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <h5 className="font-medium text-gray-900">{recording.title}</h5>
+                          <p className="text-sm text-gray-600">
+                            {new Date(recording.created_at).toLocaleDateString()} • {formatTime(recording.duration)}
+                            {recording.status !== 'ready' && (
+                              <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                                recording.status === 'uploading' ? 'bg-blue-100 text-blue-800' :
+                                recording.status === 'converting' ? 'bg-orange-100 text-orange-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {recording.status === 'uploading' && 'Uploading...'}
+                                {recording.status === 'converting' && 'Converting...'}
+                                {recording.status === 'failed' && 'Failed'}
+                              </span>
+                            )}
+                            {recording.status === 'ready' && recording.title.includes('Uploaded') && (
+                              <span className="ml-2 px-2 py-1 bg-emerald-100 text-emerald-800 text-xs rounded-full">
+                                Uploaded File
+                              </span>
+                            )}
+                          </p>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    {renamingRecording === recording.id ? (
-                      <div className="space-y-2">
-                        <input
-                          type="text"
-                          value={newName}
-                          onChange={(e) => setNewName(e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') saveRecordingName(recording.id)
-                            if (e.key === 'Escape') cancelRenaming()
-                          }}
-                          autoFocus
-                        />
-                        <div className="flex space-x-2">
+                  <div className="flex flex-col space-y-2">
+                    {/* Audio Player Controls */}
+                    {recording.status === 'ready' && (
+                      <div className="flex items-center space-x-2 mb-2">
+                        {playingRecordingId === recording.id ? (
+                          <>
+                            <button
+                              onClick={isPlaying ? pausePlayback : resumePlayback}
+                              className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                              title={isPlaying ? 'Pause' : 'Resume'}
+                            >
+                              {isPlaying ? (
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                              ) : (
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                            <button
+                              onClick={stopPlayback}
+                              className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                              title="Stop"
+                            >
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                            <span className="text-sm text-gray-600">
+                              {formatTime(Math.floor(currentTime))} / {formatTime(Math.floor(duration))}
+                            </span>
+                          </>
+                        ) : (
                           <button
-                            onClick={() => saveRecordingName(recording.id)}
-                            className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                            onClick={() => playRecording(recording.file_path, recording.id)}
+                            className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                            title="Play"
                           >
-                            Save
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                            </svg>
                           </button>
-                          <button
-                            onClick={cancelRenaming}
-                            className="px-2 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400"
-                          >
-                            Cancel
-                          </button>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Progress Bar for Currently Playing Recording */}
+                    {playingRecordingId === recording.id && (
+                      <div className="w-full mb-2">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-100" 
+                            style={{ width: `${playbackProgress}%` }}
+                          ></div>
                         </div>
                       </div>
-                    ) : (
-                      <>
-                        <h5 className="font-medium text-gray-900">{recording.title}</h5>
-                        <p className="text-sm text-gray-600">
-                          {new Date(recording.created_at).toLocaleDateString()} • {formatTime(recording.duration)}
-                          {recording.status !== 'ready' && (
-                            <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                              recording.status === 'uploading' ? 'bg-blue-100 text-blue-800' :
-                              recording.status === 'converting' ? 'bg-orange-100 text-orange-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {recording.status === 'uploading' && 'Uploading...'}
-                              {recording.status === 'converting' && 'Converting...'}
-                              {recording.status === 'failed' && 'Failed'}
-                            </span>
-                          )}
-                          {recording.status === 'ready' && recording.title.includes('Uploaded') && (
-                            <span className="ml-2 px-2 py-1 bg-emerald-100 text-emerald-800 text-xs rounded-full">
-                              Uploaded File
-                            </span>
-                          )}
-                        </p>
-                      </>
                     )}
+                    
+                    {/* Action Buttons */}
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => startRenaming(recording.id, recording.title)}
+                        className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm font-medium"
+                      >
+                        Rename
+                      </button>
+                      <button
+                        onClick={() => deleteRecording(recording.id, recording.file_path)}
+                        className="px-3 py-1 text-red-600 hover:bg-red-100 rounded-lg transition-colors text-sm font-medium"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => playRecording(recording.file_path)}
-                    disabled={recording.status !== 'ready'}
-                    className={`px-3 py-1 rounded-lg transition-colors text-sm font-medium ${
-                      recording.status === 'ready'
-                        ? 'text-blue-600 hover:bg-blue-100'
-                        : 'text-gray-400 cursor-not-allowed'
-                    }`}
-                  >
-                    {recording.status === 'ready' ? 'Play' : 'Processing...'}
-                  </button>
-                  <button
-                    onClick={() => startRenaming(recording.id, recording.title)}
-                    className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm font-medium"
-                  >
-                    Rename
-                  </button>
-                  <button
-                    onClick={() => deleteRecording(recording.id, recording.file_path)}
-                    className="px-3 py-1 text-red-600 hover:bg-red-100 rounded-lg transition-colors text-sm font-medium"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
+        )}
         </div>
-      )}
+      </div>
     </div>
   )
 }

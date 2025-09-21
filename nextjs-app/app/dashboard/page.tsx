@@ -10,6 +10,7 @@ import MedicalReportsView from "./components/MedicalReportsView";
 import RecordingsTimelineView from "./components/RecordingsTimelineView";
 import VoiceRecorderView from "./components/VoiceRecorderView";
 import CareRemindersView from "./components/CareRemindersView";
+import CallLogsView from "./components/CallLogsView";
 import PatientsView from "./components/PatientsView";
 import SettingsView from "./components/SettingsView";
 import jsPDF from "jspdf";
@@ -46,6 +47,7 @@ type ActiveView =
   | "recordings"
   | "patients"
   | "care-reminders"
+  | "call-logs"
   | "settings"
   | "profile";
 
@@ -1866,80 +1868,80 @@ export default function DashboardPage() {
 
         // For patients, show the original reports content
         return (
-          <>
-            {activeTab === "medical-reports" && (
-              <div className="p-8 bg-gray-50 min-h-screen">
-                <div className="max-w-6xl mx-auto">
-                  <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                      Reports & Medical History
-                    </h1>
-                    <p className="text-gray-600">
-                      View your recorded appointments, medical reports, and
-                      health timeline
-                    </p>
-                  </div>
-                  <div className="mb-8">
-                    <nav className="flex space-x-8">
-                      {[
-                        {
-                          id: "medical-reports",
-                          label: "Medical Reports",
-                          icon: "🏥",
-                        },
-                        { id: "transcripts", label: "Transcripts", icon: "📝" },
-                        { id: "timeline", label: "Timeline", icon: "📅" },
-                      ].map((tab) => (
-                        <button
-                          key={tab.id}
-                          onClick={() =>
-                            setActiveTab(
-                              tab.id as
-                                | "timeline"
-                                | "transcripts"
-                                | "medical-reports"
-                            )
-                          }
-                          className={`flex items-center px-4 py-2 rounded-lg font-medium transition-all ${
-                            activeTab === tab.id
-                              ? "bg-blue-100 text-blue-700 border-b-2 border-blue-500"
-                              : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                          }`}
-                        >
-                          <span className="mr-2">{tab.icon}</span>
-                          {tab.label}
-                        </button>
-                      ))}
-                    </nav>
-                  </div>
-                  <MedicalReportsView
-                    medicalReports={medicalReports}
-                    caregivers={caregivers}
-                    userId={userId}
-                    onReportsUpdate={handleReportsUpdate}
-                    showNotification={showNotification}
-                  />
-                </div>
+          <div className="p-8 bg-gray-50 min-h-screen">
+            <div className="max-w-6xl mx-auto">
+              <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  Reports & Medical History
+                </h1>
+                <p className="text-gray-600">
+                  View your recorded appointments, medical reports, and
+                  health timeline
+                </p>
               </div>
-            )}
-            {(activeTab === "transcripts" || activeTab === "timeline") && (
-              <RecordingsTimelineView
-                recordings={recordings}
-                reports={reports}
-                transcripts={transcripts}
-                activeTab={activeTab}
-                structuredView={structuredView}
-                expandedTranscript={expandedTranscript}
-                onTabChange={setActiveTab}
-                onStructuredViewChange={setStructuredView}
-                onTranscriptToggle={toggleTranscript}
-                onTranscriptRetry={onTranscriptRetry}
-                onTranscriptRename={onTranscriptRename}
-                onTranscriptDelete={onTranscriptDelete}
-                showNotification={showNotification}
-              />
-            )}
-          </>
+              <div className="mb-8">
+                <nav className="flex space-x-8">
+                  {[
+                    {
+                      id: "medical-reports",
+                      label: "Medical Reports",
+                      icon: "🏥",
+                    },
+                    { id: "transcripts", label: "Transcripts", icon: "📝" },
+                    { id: "timeline", label: "Timeline", icon: "📅" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() =>
+                        setActiveTab(
+                          tab.id as
+                            | "timeline"
+                            | "transcripts"
+                            | "medical-reports"
+                        )
+                      }
+                      className={`flex items-center px-4 py-2 rounded-lg font-medium transition-all ${
+                        activeTab === tab.id
+                          ? "bg-blue-100 text-blue-700 border-b-2 border-blue-500"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                      }`}
+                    >
+                      <span className="mr-2">{tab.icon}</span>
+                      {tab.label}
+                    </button>
+                  ))}
+                </nav>
+              </div>
+              
+              {activeTab === "medical-reports" && (
+                <MedicalReportsView
+                  medicalReports={medicalReports}
+                  caregivers={caregivers}
+                  userId={userId}
+                  onReportsUpdate={handleReportsUpdate}
+                  showNotification={showNotification}
+                />
+              )}
+              
+              {(activeTab === "transcripts" || activeTab === "timeline") && (
+                <RecordingsTimelineView
+                  recordings={recordings}
+                  reports={reports}
+                  transcripts={transcripts}
+                  activeTab={activeTab}
+                  structuredView={structuredView}
+                  expandedTranscript={expandedTranscript}
+                  onTabChange={setActiveTab}
+                  onStructuredViewChange={setStructuredView}
+                  onTranscriptToggle={toggleTranscript}
+                  onTranscriptRetry={onTranscriptRetry}
+                  onTranscriptRename={onTranscriptRename}
+                  onTranscriptDelete={onTranscriptDelete}
+                  showNotification={showNotification}
+                />
+              )}
+            </div>
+          </div>
         );
       case "patients":
         return (
@@ -1949,6 +1951,8 @@ export default function DashboardPage() {
         );
       case "care-reminders":
         return <CareRemindersView />;
+      case "call-logs":
+        return <CallLogsView />;
       case "settings":
         return <SettingsView />;
       case "profile":

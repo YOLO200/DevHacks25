@@ -148,8 +148,7 @@ function LoginForm() {
       subtitle: "Manage your healthcare journey",
       description:
         "Record appointments, track health insights, and share with your care team.",
-      icon: "👤",
-      color: "from-blue-600 to-purple-600",
+      color: "from-blue-600 to-blue-700",
       bgColor: "bg-blue-50",
     },
     caregiver: {
@@ -157,38 +156,36 @@ function LoginForm() {
       subtitle: "Support your loved ones",
       description:
         "Monitor patient health, coordinate care, and stay connected with medical updates.",
-      icon: "🤝",
-      color: "from-emerald-600 to-teal-600",
-      bgColor: "bg-emerald-50",
+      color: "from-green-600 to-green-700",
+      bgColor: "bg-green-50",
     },
   };
 
   const config = userTypeConfig[userType];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200 flex items-center justify-center px-4">
       <div className="max-w-md w-full">
         {/* User Type Header */}
         <div className="text-center mb-8">
           <div
             className={`inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r ${config.color} text-white shadow-lg mb-4`}
           >
-            <span className="text-xl mr-2">{config.icon}</span>
             <span className="font-semibold">{config.title}</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className={`text-3xl font-bold mb-2 ${userType === 'caregiver' ? 'text-green-700' : 'text-blue-700'}`}>
             {isSignUp ? "Create Account" : "Welcome Back"}
           </h1>
-          <p className="text-gray-600">{config.description}</p>
+          <p className={userType === 'caregiver' ? 'text-green-600' : 'text-blue-600'}>{config.description}</p>
         </div>
 
         {/* Login Form */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-gray-200">
+        <div className={`bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 border ${userType === 'caregiver' ? 'border-green-300' : 'border-blue-300'}`}>
           <form onSubmit={handleAuth} className="space-y-6">
             {isSignUp && (
               <>
                 <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="fullName" className={`block text-sm font-medium mb-2 ${userType === 'caregiver' ? 'text-green-700' : 'text-blue-700'}`}>
                     Full Name
                   </label>
                   <input
@@ -197,14 +194,18 @@ function LoginForm() {
                     required={isSignUp}
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-black"
+                    className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all text-gray-900 ${
+                      userType === 'caregiver' 
+                        ? 'border-green-300 focus:ring-green-500' 
+                        : 'border-blue-300 focus:ring-blue-500'
+                    }`}
                     placeholder="Enter your full name"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone Number <span className="text-gray-500 font-normal">(Optional)</span>
+                  <label htmlFor="phoneNumber" className={`block text-sm font-medium mb-2 ${userType === 'caregiver' ? 'text-green-700' : 'text-blue-700'}`}>
+                    Phone Number <span className={`font-normal ${userType === 'caregiver' ? 'text-green-600' : 'text-blue-600'}`}>(Optional)</span>
                   </label>
                   <input
                     id="phoneNumber"
@@ -214,10 +215,14 @@ function LoginForm() {
                       const formatted = formatPhoneNumber(e.target.value);
                       setPhoneNumber(formatted);
                     }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-black"
+                    className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all text-gray-900 ${
+                      userType === 'caregiver' 
+                        ? 'border-green-300 focus:ring-green-500' 
+                        : 'border-blue-300 focus:ring-blue-500'
+                    }`}
                     placeholder={userType === 'patient' ? "+1 (555) 123-4567" : "+1 (555) 123-4567"}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className={`text-xs mt-1 ${userType === 'caregiver' ? 'text-green-600' : 'text-blue-600'}`}>
                     {userType === 'patient' 
                       ? "For receiving care reminder calls and medical check-ins"
                       : "For making calls to patients and receiving notifications"
@@ -230,7 +235,7 @@ function LoginForm() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className={`block text-sm font-medium mb-2 ${userType === 'caregiver' ? 'text-green-700' : 'text-blue-700'}`}
               >
                 Email Address
               </label>
@@ -240,7 +245,11 @@ function LoginForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                  userType === 'caregiver' 
+                    ? 'border-green-200 focus:ring-green-300' 
+                    : 'border-blue-200 focus:ring-blue-300'
+                }`}
                 placeholder="Enter your email"
               />
             </div>
@@ -248,7 +257,7 @@ function LoginForm() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className={`block text-sm font-medium mb-2 ${userType === 'caregiver' ? 'text-green-700' : 'text-blue-700'}`}
               >
                 Password
               </label>
@@ -258,7 +267,11 @@ function LoginForm() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                  userType === 'caregiver' 
+                    ? 'border-green-200 focus:ring-green-300' 
+                    : 'border-blue-200 focus:ring-blue-300'
+                }`}
                 placeholder={
                   isSignUp
                     ? "Create a password (min 6 characters)"
@@ -271,19 +284,16 @@ function LoginForm() {
             <div
               className={`p-4 rounded-xl ${config.bgColor} border-2 border-opacity-50`}
             >
-              <div className="flex items-center">
-                <span className="text-2xl mr-3">{config.icon}</span>
-                <div>
-                  <div className="font-semibold text-gray-900">
-                    Signing up as{" "}
-                    {userType === "patient" ? "Patient" : "Caregiver"}
-                  </div>
-                  <div className="text-sm text-gray-600">{config.subtitle}</div>
+              <div>
+                <div className={`font-semibold ${userType === 'caregiver' ? 'text-green-700' : 'text-blue-700'}`}>
+                  Signing up as{" "}
+                  {userType === "patient" ? "Patient" : "Caregiver"}
                 </div>
+                <div className={`text-sm ${userType === 'caregiver' ? 'text-green-600' : 'text-blue-600'}`}>{config.subtitle}</div>
               </div>
               <Link
                 href="/"
-                className="text-sm text-blue-600 hover:text-blue-800 mt-2 inline-block"
+                className={`text-sm mt-2 inline-block ${userType === 'caregiver' ? 'text-green-400 hover:text-green-300' : 'text-blue-400 hover:text-blue-300'}`}
               >
                 ← Change user type
               </Link>
@@ -324,7 +334,7 @@ function LoginForm() {
                 setFullName("");
                 setPhoneNumber("");
               }}
-              className="text-gray-600 hover:text-gray-800 transition-colors"
+              className={`transition-colors ${userType === 'caregiver' ? 'text-green-600 hover:text-green-700' : 'text-blue-600 hover:text-blue-700'}`}
             >
               {isSignUp
                 ? "Already have an account? Sign In"
@@ -337,7 +347,7 @@ function LoginForm() {
         <div className="text-center mt-6">
           <Link
             href="/"
-            className="text-gray-500 hover:text-gray-700 transition-colors"
+            className={`transition-colors ${userType === 'caregiver' ? 'text-green-600 hover:text-green-700' : 'text-blue-600 hover:text-blue-700'}`}
           >
             ← Back to Home
           </Link>
@@ -351,10 +361,10 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="text-gray-600 mt-4">Loading...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-300 mx-auto"></div>
+            <p className="text-blue-600 mt-4">Loading...</p>
           </div>
         </div>
       }

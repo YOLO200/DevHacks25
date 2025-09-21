@@ -654,6 +654,39 @@ export default function CareRemindersView() {
       return;
     }
 
+    // DEBUG: Log all variables being sent to VAPI workflow
+    console.log('=== DEMO CALL DEBUG START ===');
+    console.log('Patient ID:', targetPatientId);
+    console.log('Patient Name:', patientName);
+    console.log('Patient Phone:', patientPhone);
+    console.log('Reminder ID:', targetReminderId);
+    console.log('Caregiver Name:', profile?.full_name);
+    
+    if (targetReminderId) {
+      const reminder = reminders.find(r => r.id === targetReminderId);
+      console.log('Reminder Details:', {
+        id: reminder?.id,
+        name: reminder?.name,
+        category: reminder?.category,
+        notes: reminder?.notes,
+        time: reminder?.time
+      });
+    } else if (showReminderForm) {
+      console.log('Form Reminder Details:', {
+        name: reminderForm.name,
+        category: reminderForm.category,
+        notes: reminderForm.notes,
+        time: reminderForm.time
+      });
+    }
+    
+    console.log('Variables for VAPI workflow:');
+    console.log('- user_name:', profile?.full_name || 'Unknown Caregiver');
+    console.log('- parent_name:', patientName);
+    console.log('- category:', targetReminderId ? reminders.find(r => r.id === targetReminderId)?.category : reminderForm.category || 'Demo');
+    console.log('- Notes:', targetReminderId ? reminders.find(r => r.id === targetReminderId)?.notes : reminderForm.notes || 'Demo call from caregiver dashboard');
+    console.log('=== DEMO CALL DEBUG END ===');
+
     const confirmed = confirm(`Place a demo call to ${patientName} at ${patientPhone}?`);
     if (!confirmed) return;
 
@@ -708,6 +741,18 @@ export default function CareRemindersView() {
       }
 
       const callType = result.simulation ? 'Simulated demo call' : 'Demo call';
+      
+      // DEBUG: Log the successful call result with variables
+      console.log('=== DEMO CALL SUCCESS RESULT ===');
+      console.log('Call placed successfully!');
+      console.log('Result:', result);
+      if (result.workflowVariables) {
+        console.log('Workflow variables sent to VAPI:');
+        Object.entries(result.workflowVariables).forEach(([key, value]) => {
+          console.log(`✅ ${key}: "${value}"`);
+        });
+      }
+      console.log('=== END SUCCESS RESULT ===');
       
       // Show initial success toast
       showToast({

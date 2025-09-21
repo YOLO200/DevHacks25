@@ -18,6 +18,8 @@ export default function CaregiversContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
+  const [editingCaregiver, setEditingCaregiver] = useState<string | null>(null)
+  const [editPermissions, setEditPermissions] = useState<string[]>([])
   const [formData, setFormData] = useState({
     caregiverEmail: '',
     caregiverName: '',
@@ -150,6 +152,42 @@ export default function CaregiversContent() {
     }
   }
 
+  const startEditingPermissions = (caregiverId: string, currentPermissions: string[]) => {
+    setEditingCaregiver(caregiverId)
+    setEditPermissions([...currentPermissions])
+  }
+
+  const cancelEditingPermissions = () => {
+    setEditingCaregiver(null)
+    setEditPermissions([])
+  }
+
+  const savePermissions = async (caregiverId: string) => {
+    try {
+      const { error } = await supabase
+        .from('caregiver_relationships')
+        .update({ permissions: editPermissions })
+        .eq('id', caregiverId)
+
+      if (error) throw error
+      
+      setEditingCaregiver(null)
+      setEditPermissions([])
+      await fetchCaregivers()
+    } catch (error) {
+      console.error('Error updating permissions:', error)
+      alert('Failed to update permissions. Please try again.')
+    }
+  }
+
+  const togglePermission = (permissionId: string) => {
+    setEditPermissions(prev => 
+      prev.includes(permissionId) 
+        ? prev.filter(p => p !== permissionId)
+        : [...prev, permissionId]
+    )
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'accepted': return 'bg-green-100 text-green-800'
@@ -174,7 +212,7 @@ export default function CaregiversContent() {
         <div className="mb-6">
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            className="flex items-center px-8 py-4 bg-white/30 backdrop-blur-lg rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 border border-blue-300/50 text-blue-700"
           >
             <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -303,14 +341,14 @@ export default function CaregiversContent() {
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                  className="px-8 py-4 bg-white/30 backdrop-blur-lg rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 border border-gray-300/50 text-gray-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-8 py-4 bg-white/30 backdrop-blur-lg rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 border border-blue-300/50 text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {isLoading ? 'Adding...' : 'Send Invitation'}
                 </button>
@@ -337,7 +375,7 @@ export default function CaregiversContent() {
               </p>
               <button
                 onClick={() => setShowAddForm(true)}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                className="px-8 py-4 bg-white/30 backdrop-blur-lg rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 border border-blue-300/50 text-blue-700"
               >
                 Add Your First Caregiver
               </button>
@@ -348,8 +386,10 @@ export default function CaregiversContent() {
                 <div key={caregiver.id} className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-full flex items-center justify-center text-white text-xl mr-4">
-                        🤝
+                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mr-4">
+                        <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+                        </svg>
                       </div>
                       <div>
                         <h4 className="text-lg font-medium text-gray-900">{caregiver.caregiver_name}</h4>
@@ -362,37 +402,85 @@ export default function CaregiversContent() {
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(caregiver.status)}`}>
                         {caregiver.status}
                       </span>
+                      
+                      {/* Edit Permissions Button */}
+                      <button
+                        onClick={() => startEditingPermissions(caregiver.id, caregiver.permissions || [])}
+                        className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                        title="Edit permissions"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                      </button>
+                      
+                      {/* Delete Button */}
                       <button
                         onClick={() => removeCaregiver(caregiver.id)}
-                        className="text-red-600 hover:text-red-800 transition-colors"
+                        className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
                         title="Remove caregiver"
                       >
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clipRule="evenodd" />
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414L7.586 12l-1.293 1.293a1 1 0 101.414 1.414L9 13.414l2.293 2.293a1 1 0 001.414-1.414L11.414 12l1.293-1.293z" clipRule="evenodd" />
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                         </svg>
                       </button>
                     </div>
                   </div>
 
-                  {caregiver.permissions && caregiver.permissions.length > 0 && (
-                    <div className="mt-4">
-                      <p className="text-sm font-medium text-gray-700 mb-2">Permissions:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {caregiver.permissions.map((permission: string) => {
-                          const permissionData = availablePermissions.find(p => p.id === permission)
-                          return (
-                            <span
-                              key={permission}
-                              className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md"
-                            >
-                              {permissionData?.label || permission}
-                            </span>
-                          )
-                        })}
+                  {/* Permissions Section */}
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Permissions:</p>
+                    
+                    {editingCaregiver === caregiver.id ? (
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap gap-2">
+                          {availablePermissions.map((permission) => (
+                            <label key={permission.id} className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={editPermissions.includes(permission.id)}
+                                onChange={() => togglePermission(permission.id)}
+                                className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-700">{permission.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => savePermissions(caregiver.id)}
+                            className="px-4 py-2 bg-white/30 backdrop-blur-lg rounded-lg font-medium text-sm shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 border border-blue-300/50 text-blue-700"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={cancelEditingPermissions}
+                            className="px-4 py-2 bg-white/30 backdrop-blur-lg rounded-lg font-medium text-sm shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 border border-gray-300/50 text-gray-700"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {caregiver.permissions && caregiver.permissions.length > 0 ? (
+                          caregiver.permissions.map((permission: string) => {
+                            const permissionData = availablePermissions.find(p => p.id === permission)
+                            return (
+                              <span
+                                key={permission}
+                                className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md"
+                              >
+                                {permissionData?.label || permission}
+                              </span>
+                            )
+                          })
+                        ) : (
+                          <span className="text-sm text-gray-500 italic">No permissions assigned</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

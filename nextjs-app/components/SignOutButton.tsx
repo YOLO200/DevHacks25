@@ -33,7 +33,7 @@ function SignOutButton({ collapsed = false }: SignOutButtonProps) {
   return (
     <button
       onClick={handleSignOut}
-      className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+      className="w-full px-4 py-2 bg-red-400 text-white rounded-lg hover:bg-red-500 transition-colors text-sm font-medium"
     >
       Sign Out
     </button>

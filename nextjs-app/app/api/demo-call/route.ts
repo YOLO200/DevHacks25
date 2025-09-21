@@ -168,6 +168,50 @@ export async function POST(request: NextRequest) {
       console.warn('[DEMO-CALL] Database call record creation failed (continuing anyway):', dbError)
     }
 
+    // Map database categories to workflow categories
+    const categoryMapping: Record<string, string> = {
+      'Medicine': 'medicines',
+      'Appointment': 'appointment', 
+      'Activity': 'activity',
+      'Check-in': 'activity'
+    }
+
+    // Prepare workflow variables with proper fallbacks
+    const workflowVariables = {
+      scheduled_call_id: scheduledCall?.id || `demo_${Date.now()}`,
+      user_name: caregiverProfile.full_name || 'Caregiver',
+      parent_name: patientProfile.full_name || 'Patient',
+      category: reminderData?.category ? categoryMapping[reminderData.category] || reminderData.category.toLowerCase() : 'reminder',
+      Notes: reminderData?.notes || reminderData?.name || 'This is a demo call from the caregiver dashboard.'
+    }
+
+    // DEBUG: Log all variables that will be sent to VAPI workflow
+    console.log('=== VAPI WORKFLOW VARIABLES DEBUG ===')
+    console.log('Database schema mapping:')
+    console.log('- care_reminders.caregiver_id:', user.id)
+    console.log('- care_reminders.patient_id:', patient_id)
+    console.log('- care_reminders.category:', reminderData?.category)
+    console.log('- care_reminders.notes:', reminderData?.notes)
+    console.log('- care_reminders.name:', reminderData?.name)
+    console.log()
+    console.log('Workflow variables being sent:')
+    Object.entries(workflowVariables).forEach(([key, value]) => {
+      console.log(`- ${key}: "${value}"`)
+    })
+    
+    // Validate that all required workflow variables are present
+    const requiredVars = ['user_name', 'parent_name', 'category', 'Notes']
+    const missingWorkflowVars = requiredVars.filter(varName => !workflowVariables[varName as keyof typeof workflowVariables])
+    if (missingWorkflowVars.length > 0) {
+      console.error('[DEMO-CALL] Missing required workflow variables:', missingWorkflowVars)
+      return NextResponse.json({ 
+        error: 'Missing workflow variables', 
+        details: `Required workflow variables missing: ${missingWorkflowVars.join(', ')}`,
+        variables: workflowVariables
+      }, { status: 400 })
+    }
+    console.log('=== END WORKFLOW VARIABLES DEBUG ===')
+
     // Prepare VAPI payload
     const vapiPayload = {
       phoneNumberId: VAPI_PHONE_NUMBER_ID,
@@ -176,13 +220,7 @@ export async function POST(request: NextRequest) {
         number: formattedPhoneNumber
       },
       workflowOverrides: {
-        variableValues: {
-          scheduled_call_id: scheduledCall?.id || `demo_${Date.now()}`,
-          user_name: caregiverProfile.full_name || 'Caregiver',
-          parent_name: patientProfile.full_name || 'Patient',
-          category: reminderData?.category || 'Demo',
-          Notes: reminderData?.notes || 'This is a demo call from the caregiver dashboard.'
-        }
+        variableValues: workflowVariables
       }
     }
 
@@ -241,6 +279,16 @@ export async function POST(request: NextRequest) {
 
     console.log(`[DEMO-CALL] Successfully placed call for patient ${patient_id}. VAPI Call ID: ${vapiResult?.id}`)
 
+    // Final success debug log
+    console.log('=== DEMO CALL SUCCESS DEBUG ===')
+    console.log('Call placed successfully with variables:')
+    Object.entries(workflowVariables).forEach(([key, value]) => {
+      console.log(`✅ ${key}: "${value}"`)
+    })
+    console.log('VAPI Call ID:', vapiResult?.id)
+    console.log('Scheduled Call ID:', scheduledCall?.id)
+    console.log('=== END SUCCESS DEBUG ===')
+
     return NextResponse.json({
       success: true,
       message: 'Demo call placed successfully',
@@ -249,7 +297,8 @@ export async function POST(request: NextRequest) {
       patientName: patientProfile.full_name,
       patientPhone: formattedPhoneNumber,
       originalPhoneNumber: patientProfile.patient_phone_number,
-      databaseRecordCreated: !!scheduledCall
+      databaseRecordCreated: !!scheduledCall,
+      workflowVariables: workflowVariables // Include variables in response for debugging
     })
 
   } catch (error) {

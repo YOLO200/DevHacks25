@@ -399,8 +399,10 @@ export default function PatientsView({ onNavigate }: PatientsViewProps) {
                 <div key={invitation.id} className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-600 rounded-full flex items-center justify-center text-white text-xl mr-4">
-                        👤
+                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mr-4">
+                        <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+                        </svg>
                       </div>
                       <div>
                         <h4 className="text-lg font-medium text-gray-900">
@@ -433,7 +435,7 @@ export default function PatientsView({ onNavigate }: PatientsViewProps) {
                             handleInvitationResponse(invitation.id, "accepted")
                           }
                           disabled={isLoading}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-6 py-3 bg-white/30 backdrop-blur-lg rounded-xl font-semibold text-sm shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 border border-green-300/50 text-green-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                         >
                           Accept
                         </button>
@@ -442,7 +444,7 @@ export default function PatientsView({ onNavigate }: PatientsViewProps) {
                             handleInvitationResponse(invitation.id, "declined")
                           }
                           disabled={isLoading}
-                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-6 py-3 bg-white/30 backdrop-blur-lg rounded-xl font-semibold text-sm shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 border border-red-300/50 text-red-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                         >
                           Decline
                         </button>
@@ -520,8 +522,10 @@ export default function PatientsView({ onNavigate }: PatientsViewProps) {
                 <div key={patient.id} className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-full flex items-center justify-center text-white text-xl mr-4">
-                        🤝
+                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mr-4">
+                        <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+                        </svg>
                       </div>
                       <div>
                         <h4 className="text-lg font-medium text-gray-900">
@@ -544,13 +548,13 @@ export default function PatientsView({ onNavigate }: PatientsViewProps) {
                       <div className="flex space-x-2">
                         <button
                           onClick={() => viewPatientProfile(patient.patient_id)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          className="px-6 py-3 bg-white/30 backdrop-blur-lg rounded-xl font-semibold text-sm shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 border border-blue-300/50 text-blue-700"
                         >
                           View Profile
                         </button>
                         <button
                           onClick={() => viewPatientReports(patient.patient_id)}
-                          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                          className="px-6 py-3 bg-white/30 backdrop-blur-lg rounded-xl font-semibold text-sm shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 border border-gray-300/50 text-gray-700"
                         >
                           View Reports
                         </button>
@@ -724,13 +728,13 @@ export default function PatientsView({ onNavigate }: PatientsViewProps) {
                       setShowProfileModal(false);
                       viewPatientReports(selectedPatient.patient_id);
                     }}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="flex-1 px-6 py-3 bg-white/30 backdrop-blur-lg rounded-xl font-semibold text-sm shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 border border-blue-300/50 text-blue-700"
                   >
                     View Reports & Recordings
                   </button>
                   <button
                     onClick={() => setShowProfileModal(false)}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                    className="px-6 py-3 bg-white/30 backdrop-blur-lg rounded-xl font-semibold text-sm shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 border border-gray-300/50 text-gray-700"
                   >
                     Close
                   </button>

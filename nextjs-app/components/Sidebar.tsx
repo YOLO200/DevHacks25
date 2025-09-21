@@ -92,7 +92,7 @@ const SignOutButton = memo(({ isCollapsed }: { isCollapsed: boolean }) => {
   return (
     <button
       onClick={handleSignOut}
-      className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+      className="w-full px-4 py-2 bg-red-400 text-white rounded-lg hover:bg-red-500 transition-colors text-sm font-medium"
     >
       Sign Out
     </button>
@@ -122,6 +122,7 @@ function Sidebar({
     { viewKey: "dashboard", icon: "🏠", label: "Dashboard" },
     { viewKey: "patients", icon: "👤", label: "Patients" },
     { viewKey: "care-reminders", icon: "⏰", label: "Care Reminders" },
+    { viewKey: "call-logs", icon: "📞", label: "Call Logs" },
     { viewKey: "reports", icon: "📊", label: "Reports" },
   ];
 
@@ -138,11 +139,28 @@ function Sidebar({
         <div className="flex items-center justify-between">
           {!isCollapsed && (
             <div>
-              <h2 className="text-lg font-bold text-gray-900">
+              <button
+                onClick={() => window.location.href = '/'}
+                className="text-lg font-bold text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
+              >
                 Medical Companion
-              </h2>
-              <p className="text-sm text-gray-600">
-                {isPatient ? "👤 Patient Portal" : "🤝 Caregiver Dashboard"}
+              </button>
+              <p className="text-sm text-gray-600 flex items-center">
+                {isPatient ? (
+                  <>
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                    </svg>
+                    Patient Portal
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+                    </svg>
+                    Caregiver Dashboard
+                  </>
+                )}
               </p>
             </div>
           )}
@@ -182,10 +200,18 @@ function Sidebar({
             }`}
             title="Edit Profile"
           >
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-lg bg-gradient-to-br ${
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white bg-gradient-to-br ${
               isPatient ? 'from-blue-500 to-purple-600' : 'from-emerald-500 to-teal-600'
             }`}>
-              {isPatient ? '👤' : '🤝'}
+              {isPatient ? (
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+                </svg>
+              )}
             </div>
             <div className="ml-3 text-left">
               <p className="text-sm font-medium">{userName}</p>
@@ -214,7 +240,15 @@ function Sidebar({
             }`}
             title="Edit Profile"
           >
-            {isPatient ? '👤' : '🤝'}
+            {isPatient ? (
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+              </svg>
+            )}
           </button>
         </div>
       )}
