@@ -26,6 +26,11 @@ export default function Sidebar({ userType, userName }: SidebarProps) {
       href: '/caregivers',
     },
     {
+      icon: '📅',
+      label: 'My Reminders',
+      href: '/reminders',
+    },
+    {
       icon: '📊',
       label: 'Reports & History',
       href: '/reports',
@@ -63,8 +68,8 @@ export default function Sidebar({ userType, userName }: SidebarProps) {
   const menuItems = userType === 'patient' ? patientMenuItems : caregiverMenuItems
 
   const isActive = (href: string) => {
-    if (href === '/dashboard') {
-      return pathname === '/dashboard' || pathname === '/'
+    if (href === '/patient/dashboard' || href === '/caregiver/dashboard') {
+      return pathname === href || pathname === '/dashboard' || pathname === '/'
     }
     return pathname.startsWith(href)
   }

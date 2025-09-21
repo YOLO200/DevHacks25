@@ -569,19 +569,24 @@ export default function CareRemindersPage() {
                   >
                     All Patients
                   </button>
-                  {patients.map((patient) => (
-                    <button
-                      key={patient.id}
-                      onClick={() => setSelectedPatientId(patient.id)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        selectedPatientId === patient.id
-                          ? 'bg-emerald-500 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {patient.patient_name}
-                    </button>
-                  ))}
+                  {patients.map((patient) => {
+                    const patientColor = getPatientColor(patient.id);
+                    const isSelected = selectedPatientId === patient.id;
+
+                    return (
+                      <button
+                        key={patient.id}
+                        onClick={() => setSelectedPatientId(patient.id)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
+                          isSelected
+                            ? patientColor + ' shadow-md'
+                            : patientColor + ' hover:opacity-80'
+                        }`}
+                      >
+                        {patient.patient_name}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -658,7 +663,7 @@ export default function CareRemindersPage() {
                     <div
                       key={day.toISOString()}
                       onClick={() => setSelectedDate(day)}
-                      className={`p-2 h-32 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                      className={`p-2 h-32 border rounded-lg cursor-pointer transition-all hover:shadow-md flex flex-col ${
                         isToday
                           ? 'bg-emerald-100 border-emerald-300'
                           : isSelected
@@ -666,45 +671,27 @@ export default function CareRemindersPage() {
                           : 'bg-white border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <div className={`text-sm font-medium mb-1 ${
+                      <div className={`text-sm font-medium mb-1 flex-shrink-0 ${
                         isToday ? 'text-emerald-800' : 'text-gray-900'
                       }`}>
                         {day.getDate()}
                       </div>
 
-                      <div className="space-y-1">
-                        {dayReminders.slice(0, 2).map((reminder) => (
+                      <div className="flex-1 overflow-y-auto space-y-1 calendar-day-scroll">
+                        {dayReminders.map((reminder) => (
                           <div
                             key={reminder.id}
-                            className={`text-xs px-2 py-1 rounded truncate border cursor-pointer ${getPatientColor(reminder.patient_id)}`}
+                            className={`text-xs px-2 py-1 rounded truncate border cursor-pointer flex-shrink-0 ${getPatientColor(reminder.patient_id)}`}
                             title={`${reminder.name} - ${formatTime(reminder.time)} (${reminder.patient_name})`}
-                            onClick={() => handleReminderClick(reminder, day)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReminderClick(reminder, day);
+                            }}
                           >
                             📞 {formatTime(reminder.time)}
                           </div>
                         ))}
 
-                        {dayCallLogs.slice(0, 1).map((log) => (
-                          <div
-                            key={log.id}
-                            className={`text-xs px-2 py-1 rounded truncate ${
-                              log.status === 'completed'
-                                ? 'bg-green-100 text-green-800'
-                                : log.status === 'missed'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}
-                            title={`Call with ${log.patient_name} - ${log.status}`}
-                          >
-                            ✓ {log.status}
-                          </div>
-                        ))}
-
-                        {dayReminders.length > 2 && (
-                          <div className="text-xs text-gray-500">
-                            +{dayReminders.length - 2} more
-                          </div>
-                        )}
                       </div>
                     </div>
                   )
@@ -1160,7 +1147,7 @@ export default function CareRemindersPage() {
                           selectedCallLog.status === 'no_answer' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
-                          {selectedCallLog.status.replace('_', ' ')}
+                          {selectedCallLog.status?.replace('_', ' ') || 'Unknown'}
                         </span>
                       </div>
                     </div>

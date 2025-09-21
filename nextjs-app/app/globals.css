@@ -54,7 +54,7 @@ body {
 }
 
 /* Smooth scrolling */
-html {
+html[data-scroll-behavior="smooth"] {
   scroll-behavior: smooth;
 }
 
@@ -75,4 +75,26 @@ html {
 
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(to bottom, #2563eb, #7c3aed);
+}
+
+/* Calendar day scrollbar */
+.calendar-day-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.calendar-day-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.calendar-day-scroll::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+
+.calendar-day-scroll:hover::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+}
+
+.calendar-day-scroll::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
 }

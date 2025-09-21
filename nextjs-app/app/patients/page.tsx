@@ -579,10 +579,10 @@ export default function PatientsPage() {
                               )
                             }
                             disabled={isLoading}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-10 h-10 flex items-center justify-center text-lg hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed group"
                             title="Remove relationship"
                           >
-                            Remove
+                            <span className="group-hover:scale-110 transition-transform">🗑️</span>
                           </button>
                         </div>
                       </div>
