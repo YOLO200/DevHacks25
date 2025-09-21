@@ -11,6 +11,7 @@ import RecordingsTimelineView from "./components/RecordingsTimelineView";
 import VoiceRecorderView from "./components/VoiceRecorderView";
 import CareRemindersView from "./components/CareRemindersView";
 import PatientsView from "./components/PatientsView";
+import SettingsView from "./components/SettingsView";
 import jsPDF from "jspdf";
 
 interface UserProfile {
@@ -45,7 +46,8 @@ type ActiveView =
   | "recordings"
   | "patients"
   | "care-reminders"
-  | "settings";
+  | "settings"
+  | "profile";
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -1948,27 +1950,9 @@ export default function DashboardPage() {
       case "care-reminders":
         return <CareRemindersView />;
       case "settings":
-        return (
-          <div className="p-8">
-            <div className="max-w-6xl mx-auto">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Settings
-              </h1>
-              <p className="text-gray-600 mb-8">Manage your account settings</p>
-              <div className="bg-white rounded-xl shadow-sm p-8 border border-gray-200 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">⚙️</span>
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Settings
-                </h3>
-                <p className="text-gray-600">
-                  Account settings will be available here.
-                </p>
-              </div>
-            </div>
-          </div>
-        );
+        return <SettingsView />;
+      case "profile":
+        return <SettingsView />;
       default:
         return (
           <div className="p-8">

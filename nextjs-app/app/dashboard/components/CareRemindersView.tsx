@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import DemoCallDebug from "./DemoCallDebug";
+import { showToast } from "@/components/Toast";
 
 interface Patient {
   id: string;
   patient_name: string;
   patient_email: string;
+  patient_phone_number?: string;
   relationship: string;
 }
 
@@ -66,6 +69,9 @@ export default function CareRemindersView() {
     null
   );
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDemoCallLoading, setIsDemoCallLoading] = useState(false);
+  const [useSimulatedCalls, setUseSimulatedCalls] = useState(false); // Default to real calls
+  const [activeCallSubscriptions, setActiveCallSubscriptions] = useState<Set<string>>(new Set());
 
   const [reminderForm, setReminderForm] = useState({
     patient_id: "",
@@ -131,7 +137,7 @@ export default function CareRemindersView() {
           const patientIds = data.map((item) => item.patient_id);
           const { data: profiles, error: profilesError } = await supabase
             .from("user_profiles")
-            .select("id, full_name, email")
+            .select("id, full_name, email, patient_phone_number")
             .in("id", patientIds);
 
           if (profilesError) throw profilesError;
@@ -150,6 +156,8 @@ export default function CareRemindersView() {
               profilesMap[item.patient_id]?.full_name || "Unknown Patient",
             patient_email:
               profilesMap[item.patient_id]?.email || "Unknown Email",
+            patient_phone_number:
+              profilesMap[item.patient_id]?.patient_phone_number || null,
             relationship: item.relationship,
           }));
 
@@ -268,6 +276,15 @@ export default function CareRemindersView() {
     initializeData();
   }, [fetchProfile, fetchPatients, fetchReminders, fetchCallLogs]);
 
+  // Cleanup subscriptions on unmount
+  useEffect(() => {
+    return () => {
+      activeCallSubscriptions.forEach(() => {
+        supabase.removeAllChannels();
+      });
+    };
+  }, [activeCallSubscriptions]);
+
   const handleReminderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -304,10 +321,20 @@ export default function CareRemindersView() {
       });
       setShowReminderForm(false);
       await fetchReminders();
-      alert("Care reminder created successfully!");
+      showToast({
+        type: 'success',
+        title: 'Reminder Created',
+        message: 'Care reminder created successfully!',
+        duration: 4000
+      });
     } catch (error) {
       console.error("Error creating reminder:", error);
-      alert("Failed to create reminder. Please try again.");
+      showToast({
+        type: 'error',
+        title: 'Failed to Create Reminder',
+        message: 'Please try again.',
+        duration: 5000
+      });
     } finally {
       setIsLoading(false);
     }
@@ -361,10 +388,20 @@ export default function CareRemindersView() {
       setShowEditReminderForm(false);
       setEditingReminder(null);
       await fetchReminders();
-      alert("Care reminder updated successfully!");
+      showToast({
+        type: 'success',
+        title: 'Reminder Updated',
+        message: 'Care reminder updated successfully!',
+        duration: 4000
+      });
     } catch (error) {
       console.error("Error updating reminder:", error);
-      alert("Failed to update reminder. Please try again.");
+      showToast({
+        type: 'error',
+        title: 'Failed to Update Reminder',
+        message: 'Please try again.',
+        duration: 5000
+      });
     } finally {
       setIsLoading(false);
     }
@@ -400,10 +437,20 @@ export default function CareRemindersView() {
       });
       setShowCallForm(false);
       await fetchCallLogs();
-      alert("Call log saved successfully!");
+      showToast({
+        type: 'success',
+        title: 'Call Log Saved',
+        message: 'Call log saved successfully!',
+        duration: 4000
+      });
     } catch (error) {
       console.error("Error saving call log:", error);
-      alert("Failed to save call log. Please try again.");
+      showToast({
+        type: 'error',
+        title: 'Failed to Save Call Log',
+        message: 'Please try again.',
+        duration: 5000
+      });
     } finally {
       setIsLoading(false);
     }
@@ -426,12 +473,295 @@ export default function CareRemindersView() {
       setShowDeleteConfirm(false);
       setEditingReminder(null);
       await fetchReminders();
-      alert("Reminder deleted successfully!");
+      showToast({
+        type: 'success',
+        title: 'Reminder Deleted',
+        message: 'Reminder deleted successfully!',
+        duration: 4000
+      });
     } catch (error) {
       console.error("Error deleting reminder:", error);
-      alert("Failed to delete reminder. Please try again.");
+      showToast({
+        type: 'error',
+        title: 'Failed to Delete Reminder',
+        message: 'Please try again.',
+        duration: 5000
+      });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+
+  const subscribeToCallUpdates = (scheduledCallId: string, vapiCallId: string) => {
+    // Prevent duplicate subscriptions
+    if (activeCallSubscriptions.has(scheduledCallId)) {
+      return;
+    }
+
+    console.log(`[REALTIME] Subscribing to call updates for scheduled_call_id: ${scheduledCallId}`);
+    
+    // Check current state first in case webhook already processed
+    setTimeout(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const response = await fetch(`/api/call-status?scheduled_call_id=${scheduledCallId}`, {
+            headers: { 'Authorization': `Bearer ${session.access_token}` }
+          });
+          if (response.ok) {
+            const result = await response.json();
+            if (result.found && result.webhookProcessed) {
+              console.log('[REALTIME] Call already processed, showing immediate toast');
+              // Call already processed, show toast immediately
+              const summary = result.summary;
+              const duration = summary.duration ? `${summary.duration}s` : 'unknown duration';
+              const status = summary.status || 'completed';
+              const successIndicator = status === 'completed' ? '✅' : status === 'failed' ? '❌' : '📞';
+              
+              showToast({
+                type: status === 'completed' ? 'success' : status === 'failed' ? 'error' : 'info',
+                title: `${successIndicator} Call Results Logged`,
+                message: `Call ${status} (${duration}). ${summary.hasSummary ? 'AI summary generated.' : ''}`.trim(),
+                duration: 8000
+              });
+              
+              await fetchCallLogs();
+              return; // Don't set up subscription if already processed
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[REALTIME] Error checking initial call status:', error);
+      }
+    }, 2000); // Check after 2 seconds
+    
+    const subscription = supabase
+      .channel(`call_updates_${scheduledCallId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'scheduled_calls',
+          filter: `id=eq.${scheduledCallId}`
+        },
+        (payload) => {
+          console.log('[REALTIME] Call update received:', payload);
+          
+          const updatedRecord = payload.new;
+          
+          // Check if this update indicates webhook processing
+          const webhookProcessed = !!(
+            updatedRecord.call_summary || 
+            updatedRecord.transcript || 
+            updatedRecord.recording_url ||
+            updatedRecord.ended_at ||
+            (updatedRecord.status && !['pending', 'in_progress'].includes(updatedRecord.status))
+          );
+
+          if (webhookProcessed) {
+            console.log('[REALTIME] Webhook processing detected, showing completion toast');
+            
+            // Show completion toast with call details
+            const duration = updatedRecord.call_duration ? `${updatedRecord.call_duration}s` : 'unknown duration';
+            const status = updatedRecord.status || 'completed';
+            const successIndicator = status === 'completed' ? '✅' : status === 'failed' ? '❌' : '📞';
+            
+            let message = `Call ${status} (${duration}). `;
+            if (updatedRecord.call_summary) message += 'AI summary generated. ';
+            if (updatedRecord.transcript) message += 'Transcript available. ';
+            if (updatedRecord.recording_url) message += 'Recording available. ';
+            if (updatedRecord.ended_reason) message += `Ended: ${updatedRecord.ended_reason}. `;
+            message = message.trim() || 'Call completed.';
+
+            showToast({
+              type: status === 'completed' ? 'success' : status === 'failed' ? 'error' : 'info',
+              title: `${successIndicator} Call Results Logged`,
+              message: message,
+              duration: 8000
+            });
+
+            // Refresh call logs to show updated data
+            fetchCallLogs();
+            
+            // Unsubscribe after processing
+            subscription.unsubscribe();
+            setActiveCallSubscriptions(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(scheduledCallId);
+              return newSet;
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    // Track active subscription
+    setActiveCallSubscriptions(prev => new Set(prev).add(scheduledCallId));
+
+    // Auto-cleanup after 10 minutes to prevent memory leaks
+    setTimeout(() => {
+      subscription.unsubscribe();
+      setActiveCallSubscriptions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(scheduledCallId);
+        return newSet;
+      });
+    }, 600000); // 10 minutes
+  };
+
+  const handleDemoCall = async () => {
+    // Determine patient ID - either from selected patient filter or form
+    let targetPatientId = selectedPatientId;
+    let targetReminderId = null;
+
+    // If no patient is selected from filter, try to get from form or editing reminder
+    if (!targetPatientId) {
+      if (showReminderForm && reminderForm.patient_id) {
+        targetPatientId = reminderForm.patient_id;
+      } else if (showEditReminderForm && editingReminder?.patient_id) {
+        targetPatientId = editingReminder.patient_id;
+        targetReminderId = editingReminder.id;
+      } else if (patients.length === 1) {
+        // If only one patient, use that one
+        targetPatientId = patients[0].id;
+      }
+    }
+
+    if (!targetPatientId) {
+      showToast({
+        type: 'warning',
+        title: 'No Patient Selected',
+        message: 'Please select a patient first or choose a patient from the dropdown.',
+        duration: 5000
+      });
+      return;
+    }
+
+    // Find patient and validate phone number
+    const patient = patients.find(p => p.id === targetPatientId);
+    const patientName = patient?.patient_name || "Unknown Patient";
+    const patientPhone = patient?.patient_phone_number;
+
+    if (!patientPhone) {
+      showToast({
+        type: 'error',
+        title: 'Missing Phone Number',
+        message: `Cannot place call: ${patientName} does not have a phone number on file. Please ask them to add their phone number in their profile settings.`,
+        duration: 8000
+      });
+      return;
+    }
+
+    const confirmed = confirm(`Place a demo call to ${patientName} at ${patientPhone}?`);
+    if (!confirmed) return;
+
+    setIsDemoCallLoading(true);
+
+    try {
+      // Get the current session for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        showToast({
+          type: 'error',
+          title: 'Authentication Required',
+          message: 'You must be logged in to place a demo call.',
+          duration: 5000
+        });
+        return;
+      }
+
+      const endpoint = useSimulatedCalls ? '/api/demo-call-simulate' : '/api/demo-call';
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          patient_id: targetPatientId,
+          reminder_id: targetReminderId
+        }),
+      });
+
+      // Get response text first to handle both success and error cases
+      const responseText = await response.text();
+      
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Error parsing JSON response:', parseError);
+        console.error('Raw response text:', responseText);
+        throw new Error(`Server returned ${response.status}: ${response.statusText}. Response was not valid JSON.`);
+      }
+
+      console.log('Demo call response:', { status: response.status, result });
+
+      if (!response.ok) {
+        const errorMsg = result?.error || `HTTP ${response.status}: ${response.statusText}`;
+        const error = new Error(errorMsg);
+        (error as any).details = result;
+        throw error;
+      }
+
+      const callType = result.simulation ? 'Simulated demo call' : 'Demo call';
+      
+      // Show initial success toast
+      showToast({
+        type: 'success',
+        title: 'Call Placed Successfully',
+        message: `${callType} to ${result.patientName} (${result.patientPhone}). Call ID: ${result.vapiCallId}`,
+        duration: 4000
+      });
+
+      // If database record was created, subscribe to real-time updates
+      if (result.databaseRecordCreated && result.scheduledCallId) {
+        subscribeToCallUpdates(result.scheduledCallId, result.vapiCallId);
+      } else {
+        showToast({
+          type: 'warning',
+          title: 'Call Placed',
+          message: 'Call was placed but not logged to database. Results will not be tracked.',
+          duration: 6000
+        });
+      }
+      
+      // Refresh call logs to show the new call
+      await fetchCallLogs();
+      
+    } catch (error) {
+      console.error('Error placing demo call:', error);
+      
+      // Show detailed error information
+      let errorMessage = 'Unknown error occurred';
+      let errorDetails = '';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      // Check if error has additional details
+      if ((error as any).details) {
+        const details = (error as any).details;
+        if (details.error) {
+          errorMessage = details.error;
+        }
+        if (details.details || details.message) {
+          errorDetails = `\n\nDetails: ${JSON.stringify(details.details || details.message, null, 2)}`;
+        }
+      }
+      
+      showToast({
+        type: 'error',
+        title: 'Demo Call Failed',
+        message: errorMessage + (errorDetails ? ` (See console for details)` : ''),
+        duration: 8000
+      });
+    } finally {
+      setIsDemoCallLoading(false);
     }
   };
 
@@ -564,7 +894,12 @@ export default function CareRemindersView() {
         setSelectedCallLog(callLog);
         setShowCallSummaryModal(true);
       } else {
-        alert("No call log found for this reminder.");
+        showToast({
+          type: 'info',
+          title: 'No Call Log Found',
+          message: 'No call log found for this reminder.',
+          duration: 4000
+        });
       }
     }
   };
@@ -634,6 +969,9 @@ export default function CareRemindersView() {
           </p>
         </div>
 
+        {/* Debug Panel - Temporarily disabled for production demo calls */}
+        {/* <DemoCallDebug /> */}
+
         {/* Controls */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-200">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -672,6 +1010,33 @@ export default function CareRemindersView() {
                     </button>
                   );
                 })}
+              </div>
+
+              {/* Demo Call Mode Toggle */}
+              <div className="flex items-center gap-3 mb-2">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={useSimulatedCalls}
+                    onChange={(e) => setUseSimulatedCalls(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div className={`relative w-11 h-6 rounded-full transition-colors ${
+                    useSimulatedCalls ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}>
+                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                      useSimulatedCalls ? 'translate-x-5' : 'translate-x-0'
+                    }`}></div>
+                  </div>
+                  <span className="ml-3 text-sm font-medium text-gray-700">
+                    {useSimulatedCalls ? 'Simulation Mode' : 'Live Calls'}
+                  </span>
+                </label>
+                <span className="text-xs text-gray-500">
+                  {useSimulatedCalls 
+                    ? '(Demo calls will be simulated for testing)' 
+                    : '(Demo calls will place real calls via VAPI)'}
+                </span>
               </div>
             </div>
 
@@ -829,22 +1194,31 @@ export default function CareRemindersView() {
                   <h3 className="text-xl font-bold text-gray-900">
                     Add Care Reminder
                   </h3>
-                  <button
-                    onClick={() => setShowReminderForm(false)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <svg
-                      className="w-6 h-6"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={handleDemoCall}
+                      disabled={isDemoCallLoading}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <path
-                        fillRule="evenodd"
-                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </button>
+                      {isDemoCallLoading ? '📞 Placing Call...' : '📞 Demo Call'}
+                    </button>
+                    <button
+                      onClick={() => setShowReminderForm(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <svg
+                        className="w-6 h-6"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1058,7 +1432,7 @@ export default function CareRemindersView() {
                           patient_id: e.target.value,
                         }))
                       }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     >
                       <option value="">Select patient</option>
                       {patients.map((patient) => (
@@ -1082,7 +1456,7 @@ export default function CareRemindersView() {
                           status: e.target.value as CallLog["status"],
                         }))
                       }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     >
                       <option value="completed">Completed</option>
                       <option value="no_answer">No Answer</option>
@@ -1104,7 +1478,7 @@ export default function CareRemindersView() {
                           scheduled_time: e.target.value,
                         }))
                       }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     />
                   </div>
 
@@ -1122,7 +1496,7 @@ export default function CareRemindersView() {
                           call_duration: parseInt(e.target.value) || 0,
                         }))
                       }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                       placeholder="0"
                     />
                   </div>
@@ -1140,7 +1514,7 @@ export default function CareRemindersView() {
                         call_summary: e.target.value,
                       }))
                     }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     rows={4}
                     placeholder="Summarize what was discussed during the call..."
                   />
@@ -1158,7 +1532,7 @@ export default function CareRemindersView() {
                         notes: e.target.value,
                       }))
                     }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     rows={3}
                     placeholder="Any additional notes or follow-up actions..."
                   />
@@ -1194,25 +1568,34 @@ export default function CareRemindersView() {
                   <h3 className="text-xl font-bold text-gray-900">
                     Edit Care Reminder
                   </h3>
-                  <button
-                    onClick={() => {
-                      setShowEditReminderForm(false);
-                      setEditingReminder(null);
-                    }}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <svg
-                      className="w-6 h-6"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={handleDemoCall}
+                      disabled={isDemoCallLoading}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <path
-                        fillRule="evenodd"
-                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </button>
+                      {isDemoCallLoading ? '📞 Placing Call...' : '📞 Demo Call'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowEditReminderForm(false);
+                        setEditingReminder(null);
+                      }}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <svg
+                        className="w-6 h-6"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1453,7 +1836,7 @@ export default function CareRemindersView() {
                     Are you sure you want to delete this reminder?
                   </h4>
                   <p className="text-sm text-gray-600 mb-4">
-                    "{editingReminder.name}" for{" "}
+                    &ldquo;{editingReminder.name}&rdquo; for{" "}
                     {editingReminder.patient_name}
                   </p>
                   <p className="text-sm text-red-600 font-medium">
