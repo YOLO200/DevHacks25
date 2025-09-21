@@ -29,7 +29,11 @@ interface ExistingPatient {
   patient_email?: string;
 }
 
-export default function PatientsView() {
+interface PatientsViewProps {
+  onNavigate?: (view: string) => void;
+}
+
+export default function PatientsView({ onNavigate }: PatientsViewProps) {
   const [invitations, setInvitations] = useState<PatientInvitation[]>([]);
   const [existingPatients, setExistingPatients] = useState<ExistingPatient[]>(
     []
@@ -40,7 +44,8 @@ export default function PatientsView() {
     user_type: "patient" | "caregiver";
     email: string;
   } | null>(null);
-  const [selectedPatient, setSelectedPatient] = useState<ExistingPatient | null>(null);
+  const [selectedPatient, setSelectedPatient] =
+    useState<ExistingPatient | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
   const supabase = createClient();
@@ -97,7 +102,6 @@ export default function PatientsView() {
         return;
       }
 
-
       // First, let's check if there are any caregiver_relationships at all
       const { data: allRelationships, error: allError } = await supabase
         .from("caregiver_relationships")
@@ -132,14 +136,12 @@ export default function PatientsView() {
         ...(acceptedData || []).map((acc) => acc.patient_id),
       ];
 
-
       let patientProfiles = {};
       if (patientIds.length > 0) {
         // First, let's try to fetch all user profiles to see what's available
         const { data: allProfiles, error: allProfilesError } = await supabase
           .from("user_profiles")
           .select("id, full_name, email, user_type");
-
 
         // Now try to fetch the specific patient profiles
         const { data: profiles, error: profilesError } = await supabase
@@ -155,7 +157,6 @@ export default function PatientsView() {
           acc[profile.id] = profile;
           return acc;
         }, {});
-
       }
 
       // Transform the data to include patient information
@@ -178,7 +179,6 @@ export default function PatientsView() {
           patient_email: patientProfile?.email || "Unknown Email",
         };
       });
-
 
       setInvitations(transformedInvitations);
       setExistingPatients(transformedAccepted);
@@ -267,7 +267,7 @@ export default function PatientsView() {
   };
 
   const viewPatientProfile = (patientId: string) => {
-    const patient = existingPatients.find(p => p.patient_id === patientId);
+    const patient = existingPatients.find((p) => p.patient_id === patientId);
     if (patient) {
       setSelectedPatient(patient);
       setShowProfileModal(true);
@@ -275,7 +275,13 @@ export default function PatientsView() {
   };
 
   const viewPatientReports = (patientId: string) => {
-    window.location.href = '/reports';
+    // Navigate to reports tab using the callback
+    if (onNavigate) {
+      onNavigate("reports");
+    } else {
+      // Fallback to URL redirect if no callback provided
+      window.location.href = "/dashboard?view=reports";
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -319,15 +325,11 @@ export default function PatientsView() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            My Patients
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">My Patients</h1>
           <p className="text-gray-600">
             Manage your patient relationships and respond to invitations
           </p>
         </div>
-
-
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -412,9 +414,7 @@ export default function PatientsView() {
                         </p>
                         <p className="text-xs text-gray-400">
                           Invited on{" "}
-                          {new Date(
-                            invitation.created_at
-                          ).toLocaleDateString()}
+                          {new Date(invitation.created_at).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
@@ -430,10 +430,7 @@ export default function PatientsView() {
                       <div className="flex space-x-2">
                         <button
                           onClick={() =>
-                            handleInvitationResponse(
-                              invitation.id,
-                              "accepted"
-                            )
+                            handleInvitationResponse(invitation.id, "accepted")
                           }
                           disabled={isLoading}
                           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -442,10 +439,7 @@ export default function PatientsView() {
                         </button>
                         <button
                           onClick={() =>
-                            handleInvitationResponse(
-                              invitation.id,
-                              "declined"
-                            )
+                            handleInvitationResponse(invitation.id, "declined")
                           }
                           disabled={isLoading}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -463,22 +457,19 @@ export default function PatientsView() {
                           Requested Permissions:
                         </p>
                         <div className="flex flex-wrap gap-2">
-                          {invitation.permissions.map(
-                            (permission: string) => {
-                              const permissionData =
-                                availablePermissions.find(
-                                  (p) => p.id === permission
-                                );
-                              return (
-                                <span
-                                  key={permission}
-                                  className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md"
-                                >
-                                  {permissionData?.label || permission}
-                                </span>
-                              );
-                            }
-                          )}
+                          {invitation.permissions.map((permission: string) => {
+                            const permissionData = availablePermissions.find(
+                              (p) => p.id === permission
+                            );
+                            return (
+                              <span
+                                key={permission}
+                                className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md"
+                              >
+                                {permissionData?.label || permission}
+                              </span>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -506,8 +497,8 @@ export default function PatientsView() {
                 No patients yet
               </h4>
               <p className="text-gray-600 mb-6">
-                Patients will need to invite you to become their caregiver.
-                Once invited, you'll see their invitations here.
+                Patients will need to invite you to become their caregiver. Once
+                invited, you'll see their invitations here.
               </p>
             </div>
           ) : existingPatients.length === 0 ? (
@@ -519,8 +510,8 @@ export default function PatientsView() {
                 No active patients
               </h4>
               <p className="text-gray-600">
-                You have pending invitations above. Accept them to start
-                caring for patients.
+                You have pending invitations above. Accept them to start caring
+                for patients.
               </p>
             </div>
           ) : (
@@ -552,17 +543,13 @@ export default function PatientsView() {
                       </span>
                       <div className="flex space-x-2">
                         <button
-                          onClick={() =>
-                            viewPatientProfile(patient.patient_id)
-                          }
+                          onClick={() => viewPatientProfile(patient.patient_id)}
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
                           View Profile
                         </button>
                         <button
-                          onClick={() =>
-                            viewPatientReports(patient.patient_id)
-                          }
+                          onClick={() => viewPatientReports(patient.patient_id)}
                           className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
                         >
                           View Reports
@@ -578,7 +565,9 @@ export default function PatientsView() {
                           className="w-10 h-10 flex items-center justify-center text-lg hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed group"
                           title="Remove relationship"
                         >
-                          <span className="group-hover:scale-110 transition-transform">🗑️</span>
+                          <span className="group-hover:scale-110 transition-transform">
+                            🗑️
+                          </span>
                         </button>
                       </div>
                     </div>
@@ -618,13 +607,23 @@ export default function PatientsView() {
             <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-xl font-bold text-gray-900">Patient Profile</h3>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    Patient Profile
+                  </h3>
                   <button
                     onClick={() => setShowProfileModal(false)}
                     className="text-gray-400 hover:text-gray-600"
                   >
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    <svg
+                      className="w-6 h-6"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -637,8 +636,12 @@ export default function PatientsView() {
                     🤝
                   </div>
                   <div>
-                    <h4 className="text-xl font-bold text-gray-900">{selectedPatient.patient_name}</h4>
-                    <p className="text-gray-600">{selectedPatient.patient_email}</p>
+                    <h4 className="text-xl font-bold text-gray-900">
+                      {selectedPatient.patient_name}
+                    </h4>
+                    <p className="text-gray-600">
+                      {selectedPatient.patient_email}
+                    </p>
                     <p className="text-sm text-gray-500 capitalize">
                       Relationship: {selectedPatient.relationship}
                     </p>
@@ -647,51 +650,72 @@ export default function PatientsView() {
 
                 {/* Connection Details */}
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h5 className="text-sm font-medium text-gray-700 mb-2">Connection Details</h5>
+                  <h5 className="text-sm font-medium text-gray-700 mb-2">
+                    Connection Details
+                  </h5>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Connected Since:</span>
+                      <span className="text-sm text-gray-600">
+                        Connected Since:
+                      </span>
                       <span className="text-sm text-gray-900">
-                        {new Date(selectedPatient.created_at).toLocaleDateString()}
+                        {new Date(
+                          selectedPatient.created_at
+                        ).toLocaleDateString()}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Status:</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedPatient.status)}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedPatient.status)}`}
+                      >
                         {selectedPatient.status}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Caregiver:</span>
-                      <span className="text-sm text-gray-900">{selectedPatient.caregiver_name}</span>
+                      <span className="text-sm text-gray-900">
+                        {selectedPatient.caregiver_name}
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Permissions */}
-                {selectedPatient.permissions && selectedPatient.permissions.length > 0 && (
-                  <div>
-                    <h5 className="text-sm font-medium text-gray-700 mb-3">Your Permissions</h5>
-                    <div className="grid grid-cols-1 gap-3">
-                      {selectedPatient.permissions.map((permission: string) => {
-                        const permissionData = availablePermissions.find(p => p.id === permission);
-                        return (
-                          <div key={permission} className="flex items-start p-3 bg-emerald-50 rounded-lg">
-                            <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
-                            <div>
-                              <p className="text-sm font-medium text-emerald-800">
-                                {permissionData?.label || permission}
-                              </p>
-                              <p className="text-xs text-emerald-600">
-                                {permissionData?.description || 'Permission granted'}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
+                {selectedPatient.permissions &&
+                  selectedPatient.permissions.length > 0 && (
+                    <div>
+                      <h5 className="text-sm font-medium text-gray-700 mb-3">
+                        Your Permissions
+                      </h5>
+                      <div className="grid grid-cols-1 gap-3">
+                        {selectedPatient.permissions.map(
+                          (permission: string) => {
+                            const permissionData = availablePermissions.find(
+                              (p) => p.id === permission
+                            );
+                            return (
+                              <div
+                                key={permission}
+                                className="flex items-start p-3 bg-emerald-50 rounded-lg"
+                              >
+                                <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                                <div>
+                                  <p className="text-sm font-medium text-emerald-800">
+                                    {permissionData?.label || permission}
+                                  </p>
+                                  <p className="text-xs text-emerald-600">
+                                    {permissionData?.description ||
+                                      "Permission granted"}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          }
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* Action Buttons */}
                 <div className="flex space-x-3 pt-4 border-t border-gray-200">

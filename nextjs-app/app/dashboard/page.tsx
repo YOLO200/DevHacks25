@@ -70,6 +70,12 @@ export default function DashboardPage() {
   const [sharedReports, setSharedReports] = useState<any[]>([]);
   const [sharedTranscripts, setSharedTranscripts] = useState<any[]>([]);
   const [sharedRecordings, setSharedRecordings] = useState<any[]>([]);
+  const [expandedSharedReport, setExpandedSharedReport] = useState<
+    string | null
+  >(null);
+  const [expandedSharedTranscript, setExpandedSharedTranscript] = useState<
+    string | null
+  >(null);
 
   // Caregivers state
   const [caregivers, setCaregivers] = useState<any[]>([]);
@@ -543,23 +549,23 @@ export default function DashboardPage() {
             setCaregivers([
               {
                 id: "mock-1",
-                full_name: "Dr. Sarah Johnson",
-                email: "dr.johnson@hospital.com",
-                specialty: "Primary Care Physician",
+                caregiver_name: "Dr. Sarah Johnson",
+                caregiver_email: "dr.johnson@hospital.com",
+                relationship: "Primary Care Physician",
                 status: "accepted",
               },
               {
                 id: "mock-2",
-                full_name: "John Smith",
-                email: "john.smith@family.com",
-                specialty: "Family Member",
+                caregiver_name: "John Smith",
+                caregiver_email: "john.smith@family.com",
+                relationship: "Family Member",
                 status: "accepted",
               },
               {
                 id: "mock-3",
-                full_name: "Dr. Emily Davis",
-                email: "emily.davis@cardio.com",
-                specialty: "Cardiologist",
+                caregiver_name: "Dr. Emily Davis",
+                caregiver_email: "emily.davis@cardio.com",
+                relationship: "Cardiologist",
                 status: "pending",
               },
             ]);
@@ -572,9 +578,9 @@ export default function DashboardPage() {
         const transformedCaregivers =
           data?.map((caregiver) => ({
             id: caregiver.id,
-            full_name: caregiver.caregiver_name,
-            email: caregiver.caregiver_email,
-            specialty: caregiver.relationship,
+            caregiver_name: caregiver.caregiver_name,
+            caregiver_email: caregiver.caregiver_email,
+            relationship: caregiver.relationship,
             status: caregiver.status,
             permissions: caregiver.permissions || [],
           })) || [];
@@ -586,9 +592,9 @@ export default function DashboardPage() {
           console.log(
             "🔍 [UI] Caregiver data preview:",
             transformedCaregivers.map((c) => ({
-              name: c.full_name,
-              email: c.email,
-              relationship: c.specialty,
+              name: c.caregiver_name,
+              email: c.caregiver_email,
+              relationship: c.relationship,
               status: c.status,
             }))
           );
@@ -774,6 +780,19 @@ export default function DashboardPage() {
   const toggleTranscript = (transcriptId: string) => {
     setExpandedTranscript(
       expandedTranscript === transcriptId ? null : transcriptId
+    );
+  };
+
+  // Toggle functions for shared content (caregivers)
+  const toggleSharedReport = (reportId: string) => {
+    setExpandedSharedReport(
+      expandedSharedReport === reportId ? null : reportId
+    );
+  };
+
+  const toggleSharedTranscript = (transcriptId: string) => {
+    setExpandedSharedTranscript(
+      expandedSharedTranscript === transcriptId ? null : transcriptId
     );
   };
 
@@ -1182,7 +1201,10 @@ export default function DashboardPage() {
                               key={report.id}
                               className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
                             >
-                              <div className="flex items-center hover:bg-gray-50 transition-colors cursor-pointer p-4">
+                              <div
+                                className="flex items-center hover:bg-gray-50 transition-colors cursor-pointer p-4"
+                                onClick={() => toggleSharedReport(report.id)}
+                              >
                                 <div className="flex-1">
                                   <div className="flex items-center space-x-3">
                                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -1200,11 +1222,119 @@ export default function DashboardPage() {
                                         <span className="px-2 py-1 text-xs rounded-full font-medium bg-green-100 text-green-800">
                                           Shared Report
                                         </span>
+                                        <span className="px-2 py-1 text-xs rounded-full font-medium bg-blue-100 text-blue-800 ml-2">
+                                          {report.status}
+                                        </span>
                                       </div>
+                                    </div>
+                                    <div className="text-gray-400">
+                                      <svg
+                                        className={`w-5 h-5 transform transition-transform ${
+                                          expandedSharedReport === report.id
+                                            ? "rotate-180"
+                                            : ""
+                                        }`}
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M19 9l-7 7-7-7"
+                                        />
+                                      </svg>
                                     </div>
                                   </div>
                                 </div>
                               </div>
+
+                              {/* Expanded Report Details */}
+                              {expandedSharedReport === report.id && (
+                                <div className="border-t border-gray-200 p-6 bg-gray-50">
+                                  <div className="space-y-6">
+                                    {/* Chief Complaint */}
+                                    {report.chief_complaint && (
+                                      <div>
+                                        <h5 className="font-semibold text-gray-900 mb-2">
+                                          🩺 Chief Complaint
+                                        </h5>
+                                        <p className="text-gray-700 leading-relaxed">
+                                          {report.chief_complaint}
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {/* Patient Summary */}
+                                    {report.patient_summary && (
+                                      <div>
+                                        <h5 className="font-semibold text-gray-900 mb-2">
+                                          📄 Patient Summary
+                                        </h5>
+                                        <p className="text-gray-700 leading-relaxed">
+                                          {typeof report.patient_summary ===
+                                          "string"
+                                            ? report.patient_summary
+                                            : JSON.stringify(
+                                                report.patient_summary,
+                                                null,
+                                                2
+                                              )}
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {/* Red Flags */}
+                                    {report.red_flags &&
+                                      report.red_flags.length > 0 && (
+                                        <div>
+                                          <h5 className="font-semibold text-red-900 mb-2">
+                                            🚨 Red Flags
+                                          </h5>
+                                          <ul className="space-y-2">
+                                            {report.red_flags.map(
+                                              (flag: string, index: number) => (
+                                                <li
+                                                  key={index}
+                                                  className="flex items-start space-x-2"
+                                                >
+                                                  <span className="text-red-500 mt-1">
+                                                    •
+                                                  </span>
+                                                  <span className="text-red-700">
+                                                    {flag}
+                                                  </span>
+                                                </li>
+                                              )
+                                            )}
+                                          </ul>
+                                        </div>
+                                      )}
+
+                                    {/* SOAP Note */}
+                                    {report.soap_note && (
+                                      <div>
+                                        <h5 className="font-semibold text-gray-900 mb-2">
+                                          📋 SOAP Note
+                                        </h5>
+                                        <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                          <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono">
+                                            {typeof report.soap_note ===
+                                            "string"
+                                              ? report.soap_note
+                                              : JSON.stringify(
+                                                  report.soap_note,
+                                                  null,
+                                                  2
+                                                )}
+                                          </pre>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -1248,7 +1378,12 @@ export default function DashboardPage() {
                               key={transcript.id}
                               className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
                             >
-                              <div className="flex items-center hover:bg-gray-50 transition-colors cursor-pointer p-4">
+                              <div
+                                className="flex items-center hover:bg-gray-50 transition-colors cursor-pointer p-4"
+                                onClick={() =>
+                                  toggleSharedTranscript(transcript.id)
+                                }
+                              >
                                 <div className="flex-1">
                                   <div className="flex items-center space-x-3">
                                     <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
@@ -1288,9 +1423,156 @@ export default function DashboardPage() {
                                         </span>
                                       </div>
                                     </div>
+                                    <div className="text-gray-400">
+                                      <svg
+                                        className={`w-5 h-5 transform transition-transform ${
+                                          expandedSharedTranscript ===
+                                          transcript.id
+                                            ? "rotate-180"
+                                            : ""
+                                        }`}
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M19 9l-7 7-7-7"
+                                        />
+                                      </svg>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
+
+                              {/* Expanded Transcript Details */}
+                              {expandedSharedTranscript === transcript.id && (
+                                <div className="border-t border-gray-200 bg-gray-50 p-6">
+                                  <div className="space-y-6">
+                                    {/* View Toggle */}
+                                    <div className="flex items-center justify-between">
+                                      <h5 className="text-sm font-semibold text-gray-700">
+                                        Transcript Content
+                                      </h5>
+                                      <div className="flex items-center space-x-2">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setStructuredView(true);
+                                          }}
+                                          className={`px-3 py-1 text-xs rounded-lg font-medium transition-colors ${
+                                            structuredView
+                                              ? "bg-blue-100 text-blue-700"
+                                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                          }`}
+                                        >
+                                          Structured
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setStructuredView(false);
+                                          }}
+                                          className={`px-3 py-1 text-xs rounded-lg font-medium transition-colors ${
+                                            !structuredView
+                                              ? "bg-blue-100 text-blue-700"
+                                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                          }`}
+                                        >
+                                          Raw Text
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Transcript Content */}
+                                    <div className="bg-white rounded-lg p-4">
+                                      {transcript.status === "completed" ? (
+                                        structuredView &&
+                                        transcript.structured_transcript ? (
+                                          <div>
+                                            <h6 className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                                              Structured Transcript
+                                            </h6>
+                                            <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
+                                              {transcript.structured_transcript}
+                                            </pre>
+                                          </div>
+                                        ) : transcript.transcription_text ? (
+                                          <div>
+                                            <h6 className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                                              Raw Transcript
+                                            </h6>
+                                            <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+                                              {transcript.transcription_text}
+                                            </pre>
+                                          </div>
+                                        ) : (
+                                          <div className="text-center py-8">
+                                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                              <span className="text-lg">
+                                                📝
+                                              </span>
+                                            </div>
+                                            <p className="text-sm text-gray-500">
+                                              No transcript content available
+                                            </p>
+                                          </div>
+                                        )
+                                      ) : transcript.status === "processing" ? (
+                                        <div className="text-center py-8">
+                                          <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                            <span className="text-lg">⏳</span>
+                                          </div>
+                                          <p className="text-sm text-gray-500">
+                                            Transcript is being processed...
+                                          </p>
+                                        </div>
+                                      ) : (
+                                        <div className="text-center py-8">
+                                          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                            <span className="text-lg">❌</span>
+                                          </div>
+                                          <p className="text-sm text-gray-500">
+                                            Transcript processing failed
+                                          </p>
+                                          {transcript.retry_count > 0 && (
+                                            <p className="text-xs text-gray-400 mt-1">
+                                              Retry count:{" "}
+                                              {transcript.retry_count}
+                                            </p>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Transcript Metadata */}
+                                    <div className="grid grid-cols-2 gap-4 text-xs text-gray-500">
+                                      <div>
+                                        <span className="font-medium">
+                                          Created:
+                                        </span>{" "}
+                                        {formatDate(transcript.created_at)}
+                                      </div>
+                                      <div>
+                                        <span className="font-medium">
+                                          Updated:
+                                        </span>{" "}
+                                        {formatDate(transcript.updated_at)}
+                                      </div>
+                                      {transcript.retry_count > 0 && (
+                                        <div className="col-span-2">
+                                          <span className="font-medium">
+                                            Retry Count:
+                                          </span>{" "}
+                                          {transcript.retry_count}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -1452,7 +1734,11 @@ export default function DashboardPage() {
           </>
         );
       case "patients":
-        return <PatientsView />;
+        return (
+          <PatientsView
+            onNavigate={(view) => setActiveView(view as ActiveView)}
+          />
+        );
       case "care-reminders":
         return <CareRemindersView />;
       case "settings":
