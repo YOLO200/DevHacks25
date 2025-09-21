@@ -292,10 +292,10 @@ function LoginForm() {
                 <div className={`text-xs sm:text-sm ${userType === 'caregiver' ? 'text-green-600' : 'text-blue-600'}`}>{config.subtitle}</div>
               </div>
               <Link
-                href="/"
+                href={`/login?type=${userType === 'patient' ? 'caregiver' : 'patient'}`}
                 className={`text-xs sm:text-sm mt-2 inline-block ${userType === 'caregiver' ? 'text-green-400 hover:text-green-300' : 'text-blue-400 hover:text-blue-300'}`}
               >
-                ← Change user type
+                ← Switch to {userType === 'patient' ? 'Caregiver' : 'Patient'} Portal
               </Link>
             </div>
 

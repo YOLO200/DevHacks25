@@ -296,31 +296,73 @@ export default function RecordingsTimelineView({
                         <div className="border-t border-gray-200">
                           {transcript.status === 'completed' && transcript.transcription_text && (
                             <div className="p-6">
-                              <div className="flex items-center justify-between mb-4">
-                                <h5 className="font-semibold text-gray-900">Transcription</h5>
-                                <div className="flex items-center space-x-2">
-                                  <label className="flex items-center space-x-2 text-sm">
-                                    <input
-                                      type="checkbox"
-                                      checked={structuredView}
-                                      onChange={(e) => onStructuredViewChange(e.target.checked)}
-                                      className="rounded"
-                                    />
-                                    <span>Structured View</span>
-                                  </label>
+                              <div className="space-y-6">
+                                {/* View Toggle */}
+                                <div className="flex items-center justify-between">
+                                  <h5 className="text-sm font-semibold text-gray-700">
+                                    Transcript Content
+                                  </h5>
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onStructuredViewChange(true);
+                                      }}
+                                      className={`px-3 py-1 text-xs rounded-lg font-medium transition-colors ${
+                                        structuredView
+                                          ? "bg-blue-100 text-blue-700"
+                                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                      }`}
+                                    >
+                                      Structured
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onStructuredViewChange(false);
+                                      }}
+                                      className={`px-3 py-1 text-xs rounded-lg font-medium transition-colors ${
+                                        !structuredView
+                                          ? "bg-blue-100 text-blue-700"
+                                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                      }`}
+                                    >
+                                      Raw Text
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
-                              
-                              <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
-                                {structuredView && transcript.structured_transcript ? (
-                                  <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-                                    {transcript.structured_transcript}
-                                  </div>
-                                ) : (
-                                  <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-                                    {transcript.transcription_text}
-                                  </div>
-                                )}
+
+                                {/* Transcript Content */}
+                                <div className="bg-white rounded-lg p-4">
+                                  {structuredView && transcript.structured_transcript ? (
+                                    <div>
+                                      <h6 className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                                        Structured Transcript
+                                      </h6>
+                                      <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono max-h-96 overflow-y-auto">
+                                        {transcript.structured_transcript}
+                                      </pre>
+                                    </div>
+                                  ) : transcript.transcription_text ? (
+                                    <div>
+                                      <h6 className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                                        Raw Transcript
+                                      </h6>
+                                      <pre className="text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto">
+                                        {transcript.transcription_text}
+                                      </pre>
+                                    </div>
+                                  ) : (
+                                    <div className="text-center py-8">
+                                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                        <span className="text-lg">📝</span>
+                                      </div>
+                                      <p className="text-sm text-gray-500">
+                                        No transcript content available
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
 
                               {transcript.summary && (
