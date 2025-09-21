@@ -41,6 +41,22 @@ CREATE POLICY "Users can update own profile" ON user_profiles
 CREATE POLICY "Users can insert own profile" ON user_profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
+-- Additional policy for caregivers to view patient profiles they have relationships with
+CREATE POLICY "Caregivers can view patient profiles they have relationships with" ON user_profiles
+  FOR SELECT USING (
+    user_type = 'patient' AND
+    EXISTS (
+      SELECT 1 FROM caregiver_relationships
+      WHERE caregiver_relationships.patient_id = user_profiles.id
+      AND caregiver_relationships.status = 'accepted'
+      AND caregiver_relationships.caregiver_email = (
+        SELECT email FROM user_profiles
+        WHERE user_profiles.id = auth.uid()
+        AND user_profiles.user_type = 'caregiver'
+      )
+    )
+  );
+
 -- Updated at trigger
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -87,6 +103,22 @@ CREATE POLICY "Users can update own recordings" ON recordings
 CREATE POLICY "Users can delete own recordings" ON recordings
   FOR DELETE USING (auth.uid() = user_id);
 
+-- Additional policy for caregivers to view recordings of their patients
+CREATE POLICY "Caregivers can view recordings of their patients" ON recordings
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM caregiver_relationships
+      WHERE caregiver_relationships.patient_id = recordings.user_id
+      AND caregiver_relationships.status = 'accepted'
+      AND 'view_recordings' = ANY(caregiver_relationships.permissions)
+      AND caregiver_relationships.caregiver_email = (
+        SELECT email FROM user_profiles
+        WHERE user_profiles.id = auth.uid()
+        AND user_profiles.user_type = 'caregiver'
+      )
+    )
+  );
+
 -- Updated at trigger for recordings
 CREATE TRIGGER update_recordings_updated_at
   BEFORE UPDATE ON recordings
@@ -125,6 +157,37 @@ CREATE POLICY "Patients can update own caregiver relationships" ON caregiver_rel
 CREATE POLICY "Patients can delete own caregiver relationships" ON caregiver_relationships
   FOR DELETE USING (auth.uid() = patient_id);
 
+-- Additional policies for caregivers to view relationships where they are the caregiver
+CREATE POLICY "Caregivers can view relationships where they are the caregiver" ON caregiver_relationships
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE user_profiles.id = auth.uid()
+      AND user_profiles.user_type = 'caregiver'
+      AND user_profiles.email = caregiver_relationships.caregiver_email
+    )
+  );
+
+CREATE POLICY "Caregivers can update relationships where they are the caregiver" ON caregiver_relationships
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE user_profiles.id = auth.uid()
+      AND user_profiles.user_type = 'caregiver'
+      AND user_profiles.email = caregiver_relationships.caregiver_email
+    )
+  );
+
+CREATE POLICY "Caregivers can delete relationships where they are the caregiver" ON caregiver_relationships
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE user_profiles.id = auth.uid()
+      AND user_profiles.user_type = 'caregiver'
+      AND user_profiles.email = caregiver_relationships.caregiver_email
+    )
+  );
+
 -- Updated at trigger for caregiver relationships
 CREATE TRIGGER update_caregiver_relationships_updated_at
   BEFORE UPDATE ON caregiver_relationships
@@ -162,6 +225,22 @@ CREATE POLICY "Users can update own medical reports" ON medical_reports
 
 CREATE POLICY "Users can delete own medical reports" ON medical_reports
   FOR DELETE USING (auth.uid() = user_id);
+
+-- Additional policy for caregivers to view medical reports of their patients
+CREATE POLICY "Caregivers can view medical reports of their patients" ON medical_reports
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM caregiver_relationships
+      WHERE caregiver_relationships.patient_id = medical_reports.user_id
+      AND caregiver_relationships.status = 'accepted'
+      AND 'view_reports' = ANY(caregiver_relationships.permissions)
+      AND caregiver_relationships.caregiver_email = (
+        SELECT email FROM user_profiles
+        WHERE user_profiles.id = auth.uid()
+        AND user_profiles.user_type = 'caregiver'
+      )
+    )
+  );
 
 -- Updated at trigger for medical reports
 CREATE TRIGGER update_medical_reports_updated_at
@@ -215,6 +294,7 @@ CREATE POLICY "Users can delete own recordings" ON storage.objects
 After running the SQL:
 
 1. Check **Database** → **Tables** - you should see:
+
    - `user_profiles`
    - `recordings`
    - `caregiver_relationships`
@@ -249,6 +329,7 @@ After running the SQL:
 ## 📞 **Need Help?**
 
 If you encounter issues:
+
 1. Check the Supabase dashboard logs
 2. Verify your project URL and API keys
 3. Make sure you're on the correct Supabase project
